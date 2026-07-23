@@ -38,15 +38,17 @@ const CONFIG = {
 
     photoPos:   "center bottom", // where the scene sits (keep the subjects toward the bottom)
     photoBlend: "normal",        // "multiply" melts a LIGHT background into the wall = cheap cut-out
-    // FIT the photo:  "cover"   = fill the FULL WIDTH of the screen (recommended — the reference look).
-    //                 "contain" = letterbox to show the whole photo/cut-out with empty sides.
-    photoFit:   "cover",
-    photoInsetTop: 0,            // vh of solid-color wall reserved above the photo (0 = full-bleed image)
-    photoFadeTo:  0.15,          // scene FADES to this opacity as the menu zooms in on scroll
-    menuStart:    1.00,          // menu size at the INITIAL state (before scrolling); lower it to start smaller
-    menuZoomIn:   1.12,          // menu zooms IN to this scale by the time you've scrolled through
-    menuInk:  "#5b4632",         // warm brown menu text on the wall (reference look)
-    wash:     0.28               // 0–1: soft wall tint behind the menu up top (readability)
+    photoFit:   "cover",         // full-bleed image ("contain" would letterbox with empty sides)
+    // SCROLL EFFECT — the hero zooms INTO the wall: the photo scales up (pushing the baristas
+    // down and out of frame) while the menu grows with it, so a simple hero image turns into
+    // the full menu on the wall.
+    focusX: 50,  focusY: 8,       // the point on the wall the zoom pushes toward (photo + menu anchor)
+    photoZoomMax: 2.4,            // photo zooms IN to this scale by the end of the scroll
+    photoFadeTo:  0.88,           // photo eases to this opacity at the end so the menu reads (1 = no fade)
+    menuStart:    0.62,           // menu size on initial load (small, sitting on the wall)
+    menuZoomIn:   1.05,           // menu grows to this by the end (large, filling the wall)
+    menuInk:  "#5b4632",          // warm brown menu text on the wall (reference look)
+    wash:     0.22                // 0–1: soft wall tint behind the menu (readability)
   },
 
   theme: {
@@ -99,8 +101,8 @@ const CONFIG = {
   html,body{margin:0;padding:0;}
   body{background:var(--wall);color:var(--ink);font-family:var(--sans);overflow-x:hidden;}
 
-  /* ---------------- Hero: full-screen photo, menu painted on the wall ---------------- */
-  .hero{position:relative;height:200vh;}
+  /* ---------------- Hero: full-screen photo that zooms into the wall ---------------- */
+  .hero{position:relative;height:340vh;}
   @media (max-width:760px){.hero{height:180vh;}}
   .hero-sticky{position:sticky;top:0;height:100vh;height:100dvh;overflow:hidden;background:var(--wall);}
   .stage{position:absolute;inset:0;}
@@ -110,18 +112,19 @@ const CONFIG = {
     background:
       radial-gradient(120% 70% at 50% 2%, rgba(255,255,255,.6), transparent 60%),
       linear-gradient(180deg, #efe6d6 0%, #e6dbc8 55%, #d9cdb7 100%);}
-  /* The shop scene — occupies the lower area, wall shows above it */
-  .subject{position:absolute;top:var(--ptop,0);left:0;right:0;bottom:0;
+  /* The shop scene — full-bleed; zooms IN toward the wall focal point on scroll */
+  .subject{position:absolute;inset:0;
     background-size:var(--fit,cover);background-repeat:no-repeat;
-    background-position:var(--pp,center bottom);will-change:opacity;}
+    background-position:var(--pp,center bottom);
+    transform-origin:var(--fx,50%) var(--fy,8%);will-change:transform,opacity;}
   /* Soft wall tint behind the top of the menu for readability (not a card) */
   .wash{position:absolute;inset:0;pointer-events:none;opacity:var(--wash,.28);
     background:linear-gradient(180deg, var(--wall) 0%, var(--wall) 10%, transparent 42%);}
 
   /* Menu painted on the wall — all sections visible, always; pinned to top, zooms in */
   .overlay{position:absolute;left:0;right:0;top:0;text-align:center;
-    padding:clamp(28px,5.5vh,72px) 24px 20px;transform-origin:50% 0;will-change:transform;}
-  .menu-wall{width:min(1100px,92%);margin:0 auto;}
+    padding:clamp(28px,7vh,90px) 24px 20px;transform-origin:50% 0;will-change:transform;}
+  .menu-wall{width:min(960px,90%);margin:0 auto;}
 
   .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,3.4vw,56px);text-align:left;}
   @media (max-width:760px){.cols{grid-template-columns:1fr;gap:22px;}}
@@ -159,9 +162,9 @@ const CONFIG = {
     .menu-wall{width:100%;}
     .cols{grid-template-columns:1fr;gap:22px;}
     .col li{font-size:13px;padding:8px 1px;}
-    /* Scene BELOW: full-width photo, whole scene visible */
-    .subject{order:2;position:relative;top:0;opacity:1 !important;width:100%;min-height:60vh;
-      background-size:cover;background-position:center bottom;}
+    /* Scene BELOW: full-width photo, whole scene visible, no zoom on mobile */
+    .subject{order:2;position:relative;inset:auto;top:0;opacity:1 !important;transform:none !important;
+      width:100%;min-height:60vh;background-size:cover;background-position:center bottom;}
     .scroll-cue{display:none;}
   }
 </style>
@@ -194,9 +197,10 @@ const CONFIG = {
   rs.setProperty('--sans',T.sans);
   rs.setProperty('--menuInk', S.menuInk || '#5b4632');
   rs.setProperty('--pp', S.photoPos || 'center bottom');
-  rs.setProperty('--ptop', (S.photoInsetTop||0)+'vh');
   rs.setProperty('--fit', S.photoFit || 'cover');
-  rs.setProperty('--wash', (S.wash==null?0.28:S.wash));
+  rs.setProperty('--fx', (S.focusX==null?50:S.focusX)+'%');
+  rs.setProperty('--fy', (S.focusY==null?8:S.focusY)+'%');
+  rs.setProperty('--wash', (S.wash==null?0.22:S.wash));
 
   // Shop scene sits in the lower area over a continuous wall backdrop
   const subject = document.getElementById('subject');
@@ -225,12 +229,13 @@ const CONFIG = {
   wall += '</div></div>';
   overlay.innerHTML = wall;
 
-  // On scroll: the menu (always visible at top) zooms IN while the photo FADES to transparent
+  // On scroll: the whole scene ZOOMS INTO the wall — photo scales up, menu grows with it
   const hero = document.querySelector('.hero');
   const cue = document.getElementById('cue');
-  const menuStart   = S.menuStart==null ? 1.00 : S.menuStart;  // initial menu size
-  const menuZoomIn  = S.menuZoomIn  || 1.12;   // grows to this on scroll
-  const photoFadeTo = S.photoFadeTo==null ? 0.15 : S.photoFadeTo;  // image dissolves to this opacity
+  const menuStart   = S.menuStart==null ? 0.62 : S.menuStart;  // initial (small) menu size
+  const menuZoomIn  = S.menuZoomIn  || 1.05;   // grows to this by the end
+  const photoZoomMax= S.photoZoomMax || 2.4;   // photo zooms in to this scale
+  const photoFadeTo = S.photoFadeTo==null ? 0.88 : S.photoFadeTo;  // slight fade so the menu reads
 
   let ticking = false, cueHidden = false;
   function onScroll(){ if(!ticking){requestAnimationFrame(update);ticking=true;} }
@@ -240,10 +245,12 @@ const CONFIG = {
     let p = total>0 ? (-r.top)/total : 0;
     p = Math.min(1, Math.max(0, p));
 
-    // Scene fades out (more transparent) as you scroll in
-    subject.style.opacity = (1 + (photoFadeTo - 1) * p).toFixed(3);
+    // Photo zooms INTO the wall (baristas push out of frame), easing slightly lighter
+    const photoScale = 1 + (photoZoomMax - 1) * p;
+    subject.style.transform = 'scale('+photoScale.toFixed(4)+')';
+    subject.style.opacity = (1 - (1 - photoFadeTo) * p).toFixed(3);
 
-    // Menu is fully visible from the start (smaller) and zooms in as you scroll
+    // Menu grows with the zoom: small on the wall -> large, filling it
     const menuScale = menuStart + (menuZoomIn - menuStart) * p;
     overlay.style.transform = 'scale('+menuScale.toFixed(4)+')';
 
