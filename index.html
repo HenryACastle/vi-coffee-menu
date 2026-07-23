@@ -148,34 +148,24 @@ const CONFIG = {
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
   @media (prefers-reduced-motion:reduce){.scroll-cue .chev{animation:none;}}
 
-  /* ---------------- Full typeset menu (with descriptions) ---------------- */
-  .menu{background:var(--paper);padding:clamp(40px,7vw,90px) 20px;}
-  .menu-inner{max-width:760px;margin:0 auto;}
-  .menu-title{
-    font-family:var(--serif);text-align:center;font-weight:400;
-    font-size:clamp(26px,5vw,42px);letter-spacing:.01em;margin:0 0 6px;text-wrap:balance;
+  /* ---------------- MOBILE: mirror the reference — single column on the wall, full photo below ---------------- */
+  @media (max-width:760px){
+    /* Natural document flow: no sticky zoom stage that clips */
+    .hero{height:auto;}
+    .hero-sticky{position:static;height:auto;overflow:visible;}
+    .stage{position:static;display:flex;flex-direction:column;}
+    .photo{position:absolute;inset:0;height:100%;}      /* wall stays the page backdrop */
+    .wash{position:absolute;}
+    /* Menu FIRST (on the wall up top), one clean column, never scaled (kills the sideways overflow) */
+    .overlay{order:1;position:relative;transform:none !important;padding:clamp(28px,7vw,44px) 22px 12px;}
+    .menu-wall{width:100%;}
+    .cols{grid-template-columns:1fr;gap:22px;}
+    .col li{font-size:13px;padding:8px 1px;}
+    /* Scene BELOW: full-width photo, whole scene visible */
+    .subject{order:2;position:relative;top:0;opacity:1 !important;width:100%;min-height:60vh;
+      background-size:cover;background-position:center bottom;}
+    .scroll-cue{display:none;}
   }
-  .menu-title b{font-weight:700;}
-  .menu-sub{text-align:center;color:var(--muted);font-size:13px;letter-spacing:.18em;text-transform:uppercase;margin:0 0 46px;}
-
-  .sect{margin:0 0 44px;opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease;}
-  .sect.in{opacity:1;transform:none;}
-  @media (prefers-reduced-motion:reduce){.sect{opacity:1;transform:none;transition:none;}}
-  .sect h3{
-    font-family:var(--serif);font-weight:700;font-size:clamp(17px,2.6vw,22px);
-    letter-spacing:.14em;text-transform:uppercase;margin:0 0 18px;color:var(--ink);
-    display:flex;align-items:center;gap:14px;
-  }
-  .sect h3::after{content:"";flex:1;height:1px;background:rgba(111,97,82,.35);}
-
-  .row{padding:11px 0;border-bottom:1px solid rgba(111,97,82,.2);}
-  .row-top{display:flex;align-items:baseline;gap:10px;}
-  .row .nm{font-family:var(--sans);font-weight:600;font-size:15px;letter-spacing:.08em;text-transform:uppercase;}
-  .row .dots{flex:1;border-bottom:1px dotted rgba(111,97,82,.5);transform:translateY(-4px);}
-  .row .pr{font-family:var(--serif);color:var(--accent);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;}
-  .row .desc{margin:5px 0 0;color:var(--muted);font-size:13.5px;line-height:1.5;max-width:60ch;}
-
-  .menu-foot{text-align:center;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-top:34px;}
 </style>
 </head>
 <body>
@@ -193,11 +183,6 @@ const CONFIG = {
   </section>
 
   <div class="scroll-cue" id="cue"><span>Scroll</span><span class="chev">↓</span></div>
-
-  <!-- Full menu -->
-  <section class="menu">
-    <div class="menu-inner" id="menuInner"></div>
-  </section>
 
 <script>
 (function(){
@@ -242,23 +227,6 @@ const CONFIG = {
   wall += '</div></div>';
   overlay.innerHTML = wall;
 
-  // Full menu (with descriptions)
-  const inner = document.getElementById('menuInner');
-  let mh = '<h1 class="menu-title">'+emphasize(S.heading||'Our Menu')+'</h1>'+
-           '<p class="menu-sub">VI Coffee Bar</p>';
-  MENU.forEach(sec=>{
-    mh += '<div class="sect"><h3>'+sec.section+'</h3>';
-    sec.items.forEach(it=>{
-      mh += '<div class="row"><div class="row-top"><span class="nm">'+it.name+'</span>'+
-            '<span class="dots"></span>'+
-            (it.price ? '<span class="pr">'+it.price+'</span>' : '')+'</div>'+
-            (it.desc ? '<p class="desc">'+it.desc+'</p>' : '')+'</div>';
-    });
-    mh += '</div>';
-  });
-  if (CONFIG.footerNote) mh += '<p class="menu-foot">'+CONFIG.footerNote+'</p>';
-  inner.innerHTML = mh;
-
   // On scroll: the menu (always visible at top) zooms IN while the photo FADES to transparent
   const hero = document.querySelector('.hero');
   const cue = document.getElementById('cue');
@@ -288,16 +256,6 @@ const CONFIG = {
   window.addEventListener('scroll', onScroll, {passive:true});
   window.addEventListener('resize', update);
   update();
-
-  // Clean per-section reveal on the full menu below
-  if ('IntersectionObserver' in window){
-    const io = new IntersectionObserver((es)=>{
-      es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
-    }, { threshold:0.18 });
-    document.querySelectorAll('.sect').forEach(s=>io.observe(s));
-  } else {
-    document.querySelectorAll('.sect').forEach(s=>s.classList.add('in'));
-  }
 })();
 </script>
 </body>
