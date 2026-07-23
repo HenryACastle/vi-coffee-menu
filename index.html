@@ -38,10 +38,11 @@ const CONFIG = {
 
     photoPos:   "center bottom", // keep the subjects pinned to the bottom
     photoBlend: "normal",        // "multiply" melts a LIGHT background into the wall = cheap cut-out
-    photoZoomOut: 1.12,          // photo gently zooms out to 1.0 on scroll
+    photoInsetTop: 12,           // vh of clean wall ABOVE the photo — spacing so the menu is fully clear (0 = full-bleed)
+    photoFadeTo:  0.15,          // image FADES to this opacity as the menu zooms in on scroll (dissolves into the wall)
     menuZoomIn:   1.30,          // menu is ALWAYS visible at the top and zooms IN to this scale on scroll
     menuInk:  "#5b4632",         // warm brown menu text on the wall (reference look)
-    wash:     0.22               // 0–1: faint top light-wash so text stays readable on any photo
+    wash:     0.50               // 0–1: soft wall band behind the menu up top (readability + blends the photo's top edge)
   },
 
   theme: {
@@ -100,17 +101,17 @@ const CONFIG = {
   .hero-sticky{position:sticky;top:0;height:100vh;height:100dvh;overflow:hidden;background:var(--wall);}
   .stage{position:absolute;inset:0;}
 
-  /* Full-screen photo (subjects at bottom, wall up top) */
-  .photo{position:absolute;inset:0;background-size:cover;background-position:var(--pp,center bottom);
-    transform-origin:center 80%;will-change:transform;}
+  /* Full-screen photo, dropped a touch so there's clean wall up top for the menu */
+  .photo{position:absolute;top:var(--ptop,0);left:0;right:0;bottom:0;
+    background-size:cover;background-position:var(--pp,center bottom);will-change:opacity;}
   .photo.wall{
     background:
       radial-gradient(120% 70% at 50% 4%, rgba(255,255,255,.6), transparent 60%),
       linear-gradient(180deg, #efe6d6 0%, #e6dbc8 55%, #d9cdb7 100%);
   }
-  /* Faint top light-wash so the menu stays legible on any photo (not a card) */
-  .wash{position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(180deg, rgba(248,244,236,var(--wash,.22)) 0%, rgba(248,244,236,0) 52%);}
+  /* Soft wall band up top: gives the menu clean space + blends the photo's top edge (not a card) */
+  .wash{position:absolute;inset:0;pointer-events:none;opacity:var(--wash,.5);
+    background:linear-gradient(180deg, var(--wall) 0%, var(--wall) 12%, transparent 48%);}
 
   /* Menu painted on the wall — all sections visible, always; pinned to top, zooms in */
   .overlay{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;
@@ -202,7 +203,8 @@ const CONFIG = {
   rs.setProperty('--sans',T.sans);
   rs.setProperty('--menuInk', S.menuInk || '#5b4632');
   rs.setProperty('--pp', S.photoPos || 'center bottom');
-  rs.setProperty('--wash', (S.wash==null?0.22:S.wash));
+  rs.setProperty('--ptop', (S.photoInsetTop||0)+'vh');
+  rs.setProperty('--wash', (S.wash==null?0.5:S.wash));
 
   // Full-screen shop photo (subjects at bottom, wall up top)
   const photo = document.getElementById('photo');
@@ -249,11 +251,11 @@ const CONFIG = {
   if (CONFIG.footerNote) mh += '<p class="menu-foot">'+CONFIG.footerNote+'</p>';
   inner.innerHTML = mh;
 
-  // On scroll: photo zooms out a touch, the menu (always visible at top) zooms IN
+  // On scroll: the menu (always visible at top) zooms IN while the photo FADES to transparent
   const hero = document.querySelector('.hero');
   const cue = document.getElementById('cue');
-  const photoZoomOut = S.photoZoomOut || 1.12;   // starts slightly big -> 1
-  const menuZoomIn   = S.menuZoomIn   || 1.30;   // always visible -> grows to this on scroll
+  const menuZoomIn  = S.menuZoomIn  || 1.30;   // always visible -> grows to this on scroll
+  const photoFadeTo = S.photoFadeTo==null ? 0.15 : S.photoFadeTo;  // image dissolves to this opacity
 
   let ticking = false, cueHidden = false;
   function onScroll(){ if(!ticking){requestAnimationFrame(update);ticking=true;} }
@@ -263,8 +265,8 @@ const CONFIG = {
     let p = total>0 ? (-r.top)/total : 0;
     p = Math.min(1, Math.max(0, p));
 
-    const photoScale = photoZoomOut + (1 - photoZoomOut) * p;
-    photo.style.transform = 'scale('+photoScale.toFixed(4)+')';
+    // Photo fades out (more transparent) as you scroll in
+    photo.style.opacity = (1 + (photoFadeTo - 1) * p).toFixed(3);
 
     // Menu is fully visible from the start (scale 1) and zooms in as you scroll
     const menuScale = 1 + (menuZoomIn - 1) * p;
