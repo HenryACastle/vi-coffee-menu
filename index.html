@@ -117,17 +117,18 @@ const CONFIG = {
     background:
       radial-gradient(120% 70% at 50% 2%, rgba(255,255,255,.6), transparent 60%),
       linear-gradient(180deg, #efe6d6 0%, #e6dbc8 55%, #d9cdb7 100%);}
-  /* The shop scene — full-bleed; zooms IN toward the wall focal point on scroll */
-  .subject{position:absolute;inset:0;
+  /* The shop scene — full-bleed; sits IN FRONT of the menu so the menu reads as painted on the
+     wall behind the baristas/machine. It zooms + dissolves on scroll, uncovering the menu. */
+  .subject{position:absolute;inset:0;z-index:3;pointer-events:none;
     background-size:var(--fit,cover);background-repeat:no-repeat;
     background-position:var(--pp,center bottom);
     transform-origin:var(--fx,50%) var(--fy,8%);will-change:transform,opacity;}
   /* Soft wall tint behind the top of the menu for readability (not a card) */
-  .wash{position:absolute;inset:0;pointer-events:none;opacity:var(--wash,.28);
+  .wash{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:var(--wash,.28);
     background:linear-gradient(180deg, var(--wall) 0%, var(--wall) 10%, transparent 42%);}
 
-  /* Menu painted on the wall — all sections visible, always; pinned to top, zooms in */
-  .overlay{position:absolute;left:0;right:0;top:0;text-align:center;
+  /* Menu painted on the wall — behind the scene; all sections visible, pinned to top, zooms in */
+  .overlay{position:absolute;left:0;right:0;top:0;z-index:2;text-align:center;
     padding:clamp(28px,7vh,90px) 24px 20px;transform-origin:50% 0;will-change:transform;}
   .menu-wall{width:min(960px,90%);margin:0 auto;}
 
