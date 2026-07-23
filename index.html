@@ -44,7 +44,7 @@ const CONFIG = {
     // the full menu on the wall.
     focusX: 50,  focusY: 8,       // the point on the wall the zoom pushes toward (photo + menu anchor)
     photoZoomMax: 2.4,            // photo zooms IN to this scale by the end of the scroll
-    photoFadeTo:  0.88,           // photo eases to this opacity at the end so the menu reads (1 = no fade)
+    photoFadeTo:  0.0,            // photo fades to this opacity by the end (0 = fully gone, leaving just the menu)
     menuStart:    0.62,           // menu size on initial load (small, sitting on the wall)
     menuZoomIn:   1.05,           // menu grows to this by the end (large, filling the wall)
     menuInk:  "#5b4632",          // warm brown menu text on the wall (reference look)
@@ -235,7 +235,7 @@ const CONFIG = {
   const menuStart   = S.menuStart==null ? 0.62 : S.menuStart;  // initial (small) menu size
   const menuZoomIn  = S.menuZoomIn  || 1.05;   // grows to this by the end
   const photoZoomMax= S.photoZoomMax || 2.4;   // photo zooms in to this scale
-  const photoFadeTo = S.photoFadeTo==null ? 0.88 : S.photoFadeTo;  // slight fade so the menu reads
+  const photoFadeTo = S.photoFadeTo==null ? 0.0 : S.photoFadeTo;  // photo fades to this by the end (0 = gone)
 
   let ticking = false, cueHidden = false;
   function onScroll(){ if(!ticking){requestAnimationFrame(update);ticking=true;} }
@@ -245,10 +245,12 @@ const CONFIG = {
     let p = total>0 ? (-r.top)/total : 0;
     p = Math.min(1, Math.max(0, p));
 
-    // Photo zooms INTO the wall (baristas push out of frame), easing slightly lighter
+    // Photo zooms INTO the wall (baristas push out of frame) and fades away, leaving just the menu.
+    // Fade finishes by ~90% scroll so the last stretch is a clean menu on the wall.
     const photoScale = 1 + (photoZoomMax - 1) * p;
+    const fp = Math.min(1, p / 0.9);
     subject.style.transform = 'scale('+photoScale.toFixed(4)+')';
-    subject.style.opacity = (1 - (1 - photoFadeTo) * p).toFixed(3);
+    subject.style.opacity = (1 - (1 - photoFadeTo) * fp).toFixed(3);
 
     // Menu grows with the zoom: small on the wall -> large, filling it
     const menuScale = menuStart + (menuZoomIn - menuStart) * p;
