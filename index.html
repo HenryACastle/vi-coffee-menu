@@ -38,7 +38,8 @@ const CONFIG = {
 
     photoPos:   "center bottom", // keep the subjects pinned to the bottom
     photoBlend: "normal",        // "multiply" melts a LIGHT background into the wall = cheap cut-out
-    photoZoomOut: 1.12,          // photo gently zooms out to 1.0 on scroll (subtle "zoom" touch)
+    photoZoomOut: 1.12,          // photo gently zooms out to 1.0 on scroll
+    menuZoomIn:   1.30,          // menu is ALWAYS visible at the top and zooms IN to this scale on scroll
     menuInk:  "#5b4632",         // warm brown menu text on the wall (reference look)
     wash:     0.22               // 0–1: faint top light-wash so text stays readable on any photo
   },
@@ -111,26 +112,21 @@ const CONFIG = {
   .wash{position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg, rgba(248,244,236,var(--wash,.22)) 0%, rgba(248,244,236,0) 52%);}
 
-  /* Menu painted on the wall — all sections visible, always */
+  /* Menu painted on the wall — all sections visible, always; pinned to top, zooms in */
   .overlay{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;
-    padding:clamp(20px,4.5vh,54px) 20px 20px;}
-  .menu-wall{width:min(1080px,100%);text-align:center;}
-  .wall-title{
-    font-family:var(--serif);font-weight:400;margin:0 0 clamp(16px,2.6vw,30px);
-    color:var(--menuInk);font-size:clamp(22px,3.8vw,40px);letter-spacing:.14em;text-transform:uppercase;
-  }
-  .wall-title b{font-weight:700;}
+    padding:clamp(24px,5vh,64px) 20px 20px;transform-origin:50% 0;will-change:transform;}
+  .menu-wall{width:min(1080px,100%);}
 
-  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(18px,3.2vw,50px);text-align:left;}
+  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(18px,3.4vw,54px);text-align:left;}
   @media (max-width:760px){.cols{grid-template-columns:1fr;gap:clamp(16px,4vw,26px);}}
   .col h2{
-    font-family:var(--serif);font-weight:700;margin:0 0 8px;color:var(--menuInk);
-    font-size:clamp(13px,1.7vw,17px);letter-spacing:.16em;text-transform:uppercase;text-align:center;
+    font-family:var(--serif);font-weight:700;margin:0 0 10px;color:var(--menuInk);
+    font-size:clamp(13px,1.7vw,17px);letter-spacing:.16em;text-transform:uppercase;text-align:left;
   }
   .col ul{list-style:none;margin:0;padding:0;}
-  .col li{display:flex;align-items:baseline;gap:8px;padding:6px 0;
-    border-bottom:1px solid color-mix(in srgb, var(--menuInk) 45%, transparent);
-    color:var(--menuInk);font-size:clamp(10px,1.25vw,13px);letter-spacing:.13em;text-transform:uppercase;}
+  .col li{display:flex;align-items:baseline;gap:10px;padding:7px 1px;
+    border-bottom:1px solid color-mix(in srgb, var(--menuInk) 62%, transparent);
+    color:var(--menuInk);font-size:clamp(10px,1.25vw,13px);letter-spacing:.14em;text-transform:uppercase;}
   .col li .nm{flex:1;}
   .col li .pr{font-variant-numeric:tabular-nums;font-weight:700;}
 
@@ -222,9 +218,9 @@ const CONFIG = {
     return w.join(' ');
   }
 
-  // Overlay = title + ALL sections on the wall (grid: 3-across / stacked), always visible
+  // Overlay = ALL sections on the wall (grid: 3-across / stacked), always visible, no title
   const overlay = document.getElementById('overlay');
-  let wall = '<div class="menu-wall"><h1 class="wall-title">'+emphasize(S.heading||'Our Menu')+'</h1><div class="cols">';
+  let wall = '<div class="menu-wall"><div class="cols">';
   MENU.forEach(sec=>{
     wall += '<div class="col"><h2>'+sec.section+'</h2><ul>';
     sec.items.forEach(it=>{
@@ -253,10 +249,11 @@ const CONFIG = {
   if (CONFIG.footerNote) mh += '<p class="menu-foot">'+CONFIG.footerNote+'</p>';
   inner.innerHTML = mh;
 
-  // Subtle photo zoom on scroll (the menu stays put, always visible)
+  // On scroll: photo zooms out a touch, the menu (always visible at top) zooms IN
   const hero = document.querySelector('.hero');
   const cue = document.getElementById('cue');
   const photoZoomOut = S.photoZoomOut || 1.12;   // starts slightly big -> 1
+  const menuZoomIn   = S.menuZoomIn   || 1.30;   // always visible -> grows to this on scroll
 
   let ticking = false, cueHidden = false;
   function onScroll(){ if(!ticking){requestAnimationFrame(update);ticking=true;} }
@@ -268,6 +265,10 @@ const CONFIG = {
 
     const photoScale = photoZoomOut + (1 - photoZoomOut) * p;
     photo.style.transform = 'scale('+photoScale.toFixed(4)+')';
+
+    // Menu is fully visible from the start (scale 1) and zooms in as you scroll
+    const menuScale = 1 + (menuZoomIn - 1) * p;
+    overlay.style.transform = 'scale('+menuScale.toFixed(4)+')';
 
     if (p>0.02 && !cueHidden){ cueHidden=true; cue.style.opacity='0'; }
     if (p<=0.02 && cueHidden){ cueHidden=false; cue.style.opacity='1'; }
