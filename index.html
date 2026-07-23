@@ -43,8 +43,8 @@ const CONFIG = {
     photoFit:   "cover",
     photoInsetTop: 0,            // vh of solid-color wall reserved above the photo (0 = full-bleed image)
     photoFadeTo:  0.15,          // scene FADES to this opacity as the menu zooms in on scroll
-    menuStart:    0.88,          // menu size at the INITIAL state (before scrolling); 1.0 = full size
-    menuZoomIn:   1.15,          // menu zooms IN to this scale by the time you've scrolled through
+    menuStart:    1.00,          // menu size at the INITIAL state (before scrolling); lower it to start smaller
+    menuZoomIn:   1.12,          // menu zooms IN to this scale by the time you've scrolled through
     menuInk:  "#5b4632",         // warm brown menu text on the wall (reference look)
     wash:     0.28               // 0–1: soft wall tint behind the menu up top (readability)
   },
@@ -119,20 +119,20 @@ const CONFIG = {
     background:linear-gradient(180deg, var(--wall) 0%, var(--wall) 10%, transparent 42%);}
 
   /* Menu painted on the wall — all sections visible, always; pinned to top, zooms in */
-  .overlay{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;
-    padding:clamp(24px,5vh,64px) 20px 20px;transform-origin:50% 0;will-change:transform;}
-  .menu-wall{width:min(1080px,100%);}
+  .overlay{position:absolute;left:0;right:0;top:0;text-align:center;
+    padding:clamp(28px,5.5vh,72px) 24px 20px;transform-origin:50% 0;will-change:transform;}
+  .menu-wall{width:min(1100px,92%);margin:0 auto;}
 
-  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(18px,3.4vw,54px);text-align:left;}
-  @media (max-width:760px){.cols{grid-template-columns:1fr;gap:clamp(16px,4vw,26px);}}
+  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,3.4vw,56px);text-align:left;}
+  @media (max-width:760px){.cols{grid-template-columns:1fr;gap:22px;}}
   .col h2{
-    font-family:var(--serif);font-weight:700;margin:0 0 12px;color:var(--menuInk);
-    font-size:clamp(15px,1.9vw,19px);letter-spacing:.16em;text-transform:uppercase;text-align:left;
+    font-family:var(--serif);font-weight:700;margin:0 0 14px;color:var(--menuInk);
+    font-size:clamp(16px,1.7vw,21px);letter-spacing:.16em;text-transform:uppercase;text-align:left;
   }
   .col ul{list-style:none;margin:0;padding:0;}
-  .col li{display:flex;align-items:baseline;gap:10px;padding:8px 1px;
-    border-bottom:1px solid color-mix(in srgb, var(--menuInk) 62%, transparent);
-    color:var(--menuInk);font-size:clamp(11px,1.35vw,14px);letter-spacing:.14em;text-transform:uppercase;}
+  .col li{display:flex;align-items:baseline;gap:10px;padding:9px 1px;
+    border-bottom:1px solid color-mix(in srgb, var(--menuInk) 60%, transparent);
+    color:var(--menuInk);font-size:clamp(13px,1.15vw,15px);letter-spacing:.12em;text-transform:uppercase;}
   .col li .nm{flex:1;}
   .col li .pr{font-variant-numeric:tabular-nums;font-weight:700;}
 
@@ -228,8 +228,8 @@ const CONFIG = {
   // On scroll: the menu (always visible at top) zooms IN while the photo FADES to transparent
   const hero = document.querySelector('.hero');
   const cue = document.getElementById('cue');
-  const menuStart   = S.menuStart==null ? 0.88 : S.menuStart;  // initial menu size
-  const menuZoomIn  = S.menuZoomIn  || 1.15;   // grows to this on scroll
+  const menuStart   = S.menuStart==null ? 1.00 : S.menuStart;  // initial menu size
+  const menuZoomIn  = S.menuZoomIn  || 1.12;   // grows to this on scroll
   const photoFadeTo = S.photoFadeTo==null ? 0.15 : S.photoFadeTo;  // image dissolves to this opacity
 
   let ticking = false, cueHidden = false;
