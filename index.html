@@ -45,7 +45,8 @@ const CONFIG = {
     photoFit:   "contain",
     photoInsetTop: 34,           // vh of open wall up top for the menu; the scene fills the space below it
     photoFadeTo:  0.15,          // scene FADES to this opacity as the menu zooms in on scroll
-    menuZoomIn:   1.30,          // menu is ALWAYS visible at the top and zooms IN to this scale on scroll
+    menuStart:    0.80,          // menu size at the INITIAL state (before scrolling); 1.0 = full size
+    menuZoomIn:   1.15,          // menu zooms IN to this scale by the time you've scrolled through
     menuInk:  "#5b4632",         // warm brown menu text on the wall (reference look)
     wash:     0.28               // 0–1: soft wall tint behind the menu up top (readability)
   },
@@ -261,7 +262,8 @@ const CONFIG = {
   // On scroll: the menu (always visible at top) zooms IN while the photo FADES to transparent
   const hero = document.querySelector('.hero');
   const cue = document.getElementById('cue');
-  const menuZoomIn  = S.menuZoomIn  || 1.30;   // always visible -> grows to this on scroll
+  const menuStart   = S.menuStart==null ? 0.80 : S.menuStart;  // initial menu size
+  const menuZoomIn  = S.menuZoomIn  || 1.15;   // grows to this on scroll
   const photoFadeTo = S.photoFadeTo==null ? 0.15 : S.photoFadeTo;  // image dissolves to this opacity
 
   let ticking = false, cueHidden = false;
@@ -275,8 +277,8 @@ const CONFIG = {
     // Scene fades out (more transparent) as you scroll in
     subject.style.opacity = (1 + (photoFadeTo - 1) * p).toFixed(3);
 
-    // Menu is fully visible from the start (scale 1) and zooms in as you scroll
-    const menuScale = 1 + (menuZoomIn - 1) * p;
+    // Menu is fully visible from the start (smaller) and zooms in as you scroll
+    const menuScale = menuStart + (menuZoomIn - menuStart) * p;
     overlay.style.transform = 'scale('+menuScale.toFixed(4)+')';
 
     if (p>0.02 && !cueHidden){ cueHidden=true; cue.style.opacity='0'; }
