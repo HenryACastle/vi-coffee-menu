@@ -245,10 +245,10 @@ const CONFIG = {
     let p = total>0 ? (-r.top)/total : 0;
     p = Math.min(1, Math.max(0, p));
 
-    // Photo zooms INTO the wall (baristas push out of frame) and fades away, leaving just the menu.
-    // Fade finishes by ~90% scroll so the last stretch is a clean menu on the wall.
+    // Photo zooms INTO the wall while it DISSOLVES — the fade runs ahead of the zoom so you
+    // clearly watch the scene turn transparent while it's still in frame, leaving just the menu.
     const photoScale = 1 + (photoZoomMax - 1) * p;
-    const fp = Math.min(1, p / 0.9);
+    const fp = Math.min(1, p / 0.62);            // fully faded by ~62% scroll (before it zooms away)
     subject.style.transform = 'scale('+photoScale.toFixed(4)+')';
     subject.style.opacity = (1 - (1 - photoFadeTo) * fp).toFixed(3);
 
