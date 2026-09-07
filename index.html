@@ -6,33 +6,44 @@
   bottom, and the menu text sitting DIRECTLY on the wall at the top. On scroll
   the photo zooms into the wall and dissolves, leaving just the menu.
   ----------------------------------------------------------------------------
-  HOW TO EMBED (Squarespace Code Block / Wix Embed HTML)
+  HOW TO EMBED — SQUARESPACE CODE BLOCK
 
-    Paste EVERYTHING between the two   >>> PASTE FROM HERE <<<   markers below.
-    You do NOT paste <html>, <head> or <body> — the host page already has them.
+    1. Edit the page -> add a Code Block -> paste EVERYTHING between the two
+       >>> PASTE FROM HERE <<< markers below. You do NOT paste <html>, <head>
+       or <body>; the Squarespace page already has them.
+    2. Save, then view the LIVE or PREVIEW site. Squarespace does NOT run
+       JavaScript inside the editor - in edit mode you will only ever see a
+       grey "Code Block" placeholder. Not a bug; judge it on the live page.
+    3. Code Blocks need a Business plan or higher. On Personal they do not
+       exist, and the widget would have to be iframe-hosted instead.
 
-  THE TWO KNOBS THAT CONTROL SIZE AND WIDTH — both in CONFIG.embed:
+  THE TWO KNOBS THAT CONTROL SIZE AND WIDTH - both in CONFIG.embed:
 
-    fullBleed   true  -> the scene breaks out of the site's centered content
+    fullBleed   true  -> the scene breaks out of Squarespace's centered content
                          column and runs edge to edge. Set false to stay inside
                          the column.
     stageHeight how tall the scene is on screen. "100vh" = fills the screen.
-                "70vh" leaves the next section peeking. "620px" is a fixed box.
+                "78vh" leaves the next section peeking. "620px" is a fixed box.
     scrollLength how much page scroll the zoom takes, in stage-heights.
                  0.8 = quick. 1.4 = balanced (default). 3 = the old cinematic
                  length. TOTAL HEIGHT OF THIS WIDGET = stageHeight x (1 + scrollLength).
                  If the widget feels "too tall" and pushes the rest of the page
                  down, LOWER scrollLength first, then stageHeight.
 
+  FULL WIDTH: the CSS breakout below handles it on its own. To make it exact,
+  also set the SECTION to full width in the 7.1 section editor and drag its
+  side padding to 0 - otherwise you are fighting the section's own gutter.
+
   Nothing here styles the host page: every rule is scoped to .vic and every CSS
   variable lives on the widget's own root, not on <html>.
 
-  SQUARESPACE NOTE: position:sticky only works if no ancestor section has
-  overflow:hidden or a transform. If the zoom refuses to pin, add the
-  section-id override at the bottom of the <style> block.
+  IF THE ZOOM WILL NOT PIN: position:sticky dies under an ancestor with
+  overflow:hidden or a transform, and some Squarespace sections have both.
+  Uncomment the section-id override at the bottom of the <style> block.
 
-  THE PHOTO: set CONFIG.scene.photo to the shop photo URL (upload to the site's
-  own media library — do NOT ship the base64 placeholders to a live site).
+  THE PHOTO: set CONFIG.scene.photo to the shop photo URL. Upload it in
+  Squarespace, copy the resulting /content/ URL, and paste it here — do NOT
+  ship the base64 placeholders to the live site (they make this file 650KB+).
   Use a wide landscape photo with the PEOPLE / MACHINE toward the BOTTOM and
   empty wall up top; that top wall is where the menu sits.
   ============================================================================
