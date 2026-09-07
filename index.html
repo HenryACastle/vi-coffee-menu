@@ -26,9 +26,15 @@
                 "78vh" leaves the next section peeking. "620px" is a fixed box.
     scrollLength how much page scroll the zoom takes, in stage-heights.
                  0.8 = quick. 1.4 = balanced (default). 3 = the old cinematic
-                 length. TOTAL HEIGHT OF THIS WIDGET = stageHeight x (1 + scrollLength).
-                 If the widget feels "too tall" and pushes the rest of the page
-                 down, LOWER scrollLength first, then stageHeight.
+                 length.
+    holdAtEnd   extra scroll AFTER the zoom lands, in stage-heights. The finished
+                 menu stays pinned and readable for this long, then the page
+                 releases and scrolls on normally. 0.6 = default (a beat to read
+                 it). 0 = release the instant the zoom lands.
+
+    TOTAL HEIGHT = stageHeight x (1 + scrollLength + holdAtEnd).
+    If the widget feels "too tall" and pushes the rest of the page down, LOWER
+    scrollLength first, then holdAtEnd, then stageHeight.
 
   FULL WIDTH: the CSS breakout below handles it on its own. To make it exact,
   also set the SECTION to full width in the 7.1 section editor and drag its
@@ -65,7 +71,13 @@ const CONFIG = {
   embed: {
     fullBleed:    true,     // true = edge-to-edge, breaks out of the content column
     stageHeight:  "78vh",   // on-screen height of the scene ("100vh", "70vh", "620px")
-    scrollLength: 1.4       // scroll distance in stage-heights (0.8 quick / 1.4 balanced / 3 cinematic)
+    scrollLength: 1.4,      // scroll spent ON the zoom (0.8 quick / 1.4 balanced / 3 cinematic)
+    holdAtEnd:    0.6,      // EXTRA scroll AFTER the zoom finishes: the completed menu stays
+                            // pinned and readable, then the page releases and scrolls on.
+                            // 0 = no hold (the old behaviour, releases the instant it lands).
+    fitMenuAtEnd: true      // clamp the final menu size so the WHOLE menu fits inside the
+                            // stage at the end. Without this a long menu can finish zoomed
+                            // past the bottom edge and get clipped during the hold.
   },
 
   scene: {
@@ -290,16 +302,34 @@ const CONFIG = {
   /* ---- SIZE: stage height + scroll runway, both from CONFIG.embed ---- */
   const stageHeight  = E.stageHeight || '78vh';
   const scrollLength = E.scrollLength==null ? 1.4 : Math.max(0, E.scrollLength);
+  const holdAtEnd    = E.holdAtEnd==null   ? 0.6 : Math.max(0, E.holdAtEnd);
+  const fitMenuAtEnd = E.fitMenuAtEnd !== false;
+  const runwayStages = scrollLength + holdAtEnd;   // total scrollable runway, in stage-heights
   rs.setProperty('--stage', stageHeight);
 
   /* ---- WIDTH: full-bleed breakout, measured against the viewport width
          EXCLUDING the scrollbar so it never causes sideways scroll. ---- */
   if (E.fullBleed !== false) root.classList.add('is-fullbleed');
+  let endScale = 1.05;   // final menu scale, recomputed on every layout change
   function measure(){
     rs.setProperty('--vw', document.documentElement.clientWidth + 'px');
-    // Total widget height = one stage on screen + scrollLength stages of runway.
+    // Total widget height = one stage on screen, + scrollLength stages of zoom,
+    // + holdAtEnd stages of the finished menu sitting still before the page moves on.
     const stagePx = sticky.getBoundingClientRect().height || window.innerHeight;
-    rs.setProperty('--heroH', Math.round(stagePx * (1 + scrollLength)) + 'px');
+    rs.setProperty('--heroH', Math.round(stagePx * (1 + runwayStages)) + 'px');
+
+    // How big can the menu end up and still be fully visible? offsetHeight is the
+    // UNTRANSFORMED layout height, so measuring it is not polluted by the live scale.
+    endScale = menuZoomIn;
+    if (fitMenuAtEnd){
+      const natural = overlay.offsetHeight;
+      if (natural > 0) endScale = Math.min(menuZoomIn, stagePx / natural);
+      if (endScale < menuStart){
+        endScale = menuStart;   // never shrink below the start size
+        if (window.console) console.warn('[VI menu] The menu is taller than the stage, so it '
+          + 'cannot fit even at its starting size. Raise embed.stageHeight, or trim items.');
+      }
+    }
   }
 
   /* Static background behind everything (the light wall the menu ends up on) */
@@ -347,19 +377,25 @@ const CONFIG = {
     // Runway = hero height minus the STICKY height (not the window height —
     // the stage can be shorter than the screen, e.g. 78vh).
     const total = r.height - sticky.getBoundingClientRect().height;
-    let p = total>0 ? (-r.top)/total : 0;
+    let p = total>0 ? (-r.top)/total : 0;          // 0..1 across the WHOLE runway
     p = Math.min(1, Math.max(0, p));
 
-    const photoScale = 1 + (photoZoomMax - 1) * p;
-    const fp = Math.min(1, p / 0.62);            // fully faded by ~62% scroll
+    // Remap: the zoom finishes after scrollLength stages, then `a` sits at 1 for the
+    // holdAtEnd stages that follow — the menu is done and simply stays put, still
+    // pinned, until the runway runs out and the page scrolls on normally.
+    let a = (scrollLength <= 0) ? 1 : p * (runwayStages / scrollLength);
+    a = Math.min(1, Math.max(0, a));
+
+    const photoScale = 1 + (photoZoomMax - 1) * a;
+    const fp = Math.min(1, a / 0.62);            // fully faded by ~62% of the ZOOM
     subject.style.transform = 'scale('+photoScale.toFixed(4)+')';
     subject.style.opacity = (1 - (1 - photoFadeTo) * fp).toFixed(3);
 
-    const menuScale = menuStart + (menuZoomIn - menuStart) * p;
+    const menuScale = menuStart + (endScale - menuStart) * a;
     overlay.style.transform = 'scale('+menuScale.toFixed(4)+')';
 
-    if (p>0.02 && !cueHidden){ cueHidden=true; cue.style.opacity='0'; }
-    if (p<=0.02 && cueHidden){ cueHidden=false; cue.style.opacity='1'; }
+    if (a>0.02 && !cueHidden){ cueHidden=true; cue.style.opacity='0'; }
+    if (a<=0.02 && cueHidden){ cueHidden=false; cue.style.opacity='1'; }
   }
 
   function relayout(){ measure(); update(); }
