@@ -111,9 +111,10 @@ const CONFIG = {
     //   maskTopFrom - above this the photo is fully gone   (0% = the very top edge)
     //   maskTopTo   - below this the photo is fully solid  (raise it to erase more)
     // Bands in this photo: ceiling+lights 0-28%, navy wall 20-45%, plants 15-70%,
-    // cups 25-80%, machine 70-100%. 36% clears the ceiling and both pendants.
+    // cups 25-80%, machine 70-100%. 50% clears the ceiling, both pendants and the
+    // upper plants, and buys the vertical room that menuGap below needs.
     maskTopFrom: "0%",
-    maskTopTo:   "36%",
+    maskTopTo:   "50%",
 
     photoBlend: "normal",        // "multiply" is the fake-cutout hack for opaque photos; the
                                  // mask above is the real mechanism now, so keep this normal.
@@ -127,6 +128,12 @@ const CONFIG = {
     menuStart:    0.92,          // menu size on initial load. Auto-reduced if it would not fit
                                  // the clear space above the photo, so it is never half-hidden.
     menuZoomIn:   1.05,          // menu grows to this by the end
+    menuGap:  "9vh",             // BREATHING ROOM between the bottom of the menu and the line
+                                 // where the photo goes solid (maskTopTo). The menu is scaled
+                                 // down as needed to keep this clear, so it never crowds the
+                                 // plants. Accepts px / vh / % of the stage. Budget check:
+                                 // clear space = stage x maskTopTo - menuTop - menuGap, so a
+                                 // big gap needs a big maskTopTo. See the console warning.
     menuTop:  "2.5vh",           // how far down the wall the menu starts. LOWER = higher up.
                                  // Was an implicit clamp(24px,6vh,80px); 2.5vh lifts it.
     menuInk:  "#5b4632",         // warm brown menu text on the wall
@@ -346,6 +353,17 @@ const CONFIG = {
          EXCLUDING the scrollbar so it never causes sideways scroll. ---- */
   if (E.fullBleed !== false) root.classList.add('is-fullbleed');
   const sceneFrac = Math.min(1, Math.max(0.05, (parseFloat(S.sceneHeight) || 100) / 100));
+  const maskToFrac = Math.min(1, Math.max(0, (parseFloat(S.maskTopTo) || 36) / 100));
+  // Resolve a css-ish length ("400px" / "9vh" / "12%") to pixels. % is of the stage.
+  function toPx(v, stagePx){
+    if (v == null) return 0;
+    const n = parseFloat(v); if (!isFinite(n)) return 0;
+    const u = String(v).replace(/^[-\d.\s]+/, '').trim().toLowerCase();
+    if (u === 'vh') return n / 100 * window.innerHeight;
+    if (u === 'vw') return n / 100 * document.documentElement.clientWidth;
+    if (u === '%')  return n / 100 * stagePx;
+    return n;   // px, or unitless
+  }
   let startScale = 0.92, endScale = 1.05;   // recomputed on every layout change
   function measure(){
     rs.setProperty('--vw', document.documentElement.clientWidth + 'px');
@@ -362,14 +380,26 @@ const CONFIG = {
     startScale = menuStart; endScale = menuZoomIn;
     const natural = overlay.offsetHeight;
     if (natural > 0){
-      const wallPx = stagePx * (1 - sceneFrac);
-      startScale = Math.min(menuStart, wallPx / natural);
+      // Where does the photo actually become solid? Top of the band, plus the masked
+      // fade inside it. With sceneHeight 100% that is simply stage x maskTopTo.
+      // (Using the old stage x (1 - sceneFrac) here gave 0 once the band went back to
+      // 100%, which drove startScale to 0 and made the menu vanish on load.)
+      const solidAt = stagePx * (1 - sceneFrac) + (stagePx * sceneFrac) * maskToFrac;
+      const gapPx   = toPx(S.menuGap, stagePx);
+      const topPx   = parseFloat(getComputedStyle(overlay).paddingTop) || 0;
+      const clearPx = solidAt - topPx - gapPx;
+
+      startScale = Math.min(menuStart, clearPx / natural);
+      if (startScale < 0.3) startScale = 0.3;             // never collapse to nothing
       if (fitMenuAtEnd) endScale = Math.min(menuZoomIn, stagePx / natural);
       if (endScale < startScale) endScale = startScale;   // never shrink as it scrolls
-      if (startScale < 0.45 && window.console){
-        console.warn('[VI menu] Only ' + Math.round(wallPx) + 'px of clean wall above the photo, '
-          + 'so the menu had to shrink to ' + startScale.toFixed(2) + ' to fit. Lower '
-          + 'scene.sceneHeight, or raise embed.stageHeight.');
+
+      if (clearPx / natural < 0.5 && window.console){
+        console.warn('[VI menu] Tight fit. Photo goes solid at ' + Math.round(solidAt)
+          + 'px; menuTop ' + Math.round(topPx) + 'px + menuGap ' + Math.round(gapPx)
+          + 'px leaves ' + Math.round(clearPx) + 'px for a menu that wants '
+          + Math.round(natural) + 'px, so it is scaled to ' + startScale.toFixed(2)
+          + '. Raise scene.maskTopTo or embed.stageHeight, or lower scene.menuGap.');
       }
     }
   }
