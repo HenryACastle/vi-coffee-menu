@@ -74,7 +74,7 @@ const CONFIG = {
                             // now takes the lower half, so the stage has to be taller for the
                             // menu to have enough clean wall above it to stay readable.
     scrollLength: 1.2,      // scroll spent ON the zoom (0.8 quick / 1.4 balanced / 3 cinematic)
-    holdAtEnd:    0.15,     // EXTRA scroll AFTER the zoom finishes: the completed menu stays
+    holdAtEnd:    0.6,      // EXTRA scroll AFTER the zoom finishes: the completed menu stays
                             // pinned and readable, then the page releases and scrolls on.
                             // 0 = no hold (the old behaviour, releases the instant it lands).
     desktopHeight: "",       // FIXED desktop height. The widget is exactly this tall, NOT pinned:
@@ -218,6 +218,7 @@ const CONFIG = {
     /* --stage and --heroH are written by JS from CONFIG.embed */
     --stage:600px;
     position:relative;
+    overflow:clip;        /* clip, not hidden: clips stray bleed but keeps sticky pinning working */
     color:var(--ink);
     font-family:var(--sans);
     line-height:1.35;
@@ -495,6 +496,9 @@ const CONFIG = {
     photoWall.style.background =
       'linear-gradient(rgba(255,255,255,'+L+'),rgba(255,255,255,'+L+')), url("'+S.bgImage+'") center/cover no-repeat';
   }
+  // The pinned stage is shorter than the screen, so the scroll runway shows beneath it. Paint
+  // the whole hero the same wall colour so that runway reads as more wall, not page-white.
+  hero.style.background = (hasBg ? 'rgba(255,255,255,'+(S.bgLight==null ? 0.82 : S.bgLight)+')' : T.wall);
 
   /* Shop scene over the wall backdrop; zooms + dissolves on scroll */
   const hasPhoto = S.photo && !/^REPLACE_WITH/.test(S.photo);
