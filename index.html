@@ -77,9 +77,9 @@ const CONFIG = {
     holdAtEnd:    0.15,     // EXTRA scroll AFTER the zoom finishes: the completed menu stays
                             // pinned and readable, then the page releases and scrolls on.
                             // 0 = no hold (the old behaviour, releases the instant it lands).
-    maxHeightDesktop: "200vh", // HARD CAP on total widget height on desktop (px / vh). The scroll
+    maxHeightDesktop: "150vh", // HARD CAP on total widget height on desktop (px / vh). The scroll
                             // runway is trimmed to fit, so the pinned stretch gets shorter.
-    maxHeightMobile:  "none",  // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
+    maxHeightMobile:  "40vh",   // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
                             // so only set it once you know the content height.
     fitMenuAtEnd: true      // clamp the final menu size so the WHOLE menu fits inside the
                             // stage at the end. Without this a long menu can finish zoomed
