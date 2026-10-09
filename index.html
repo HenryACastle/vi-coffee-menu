@@ -74,7 +74,7 @@ const CONFIG = {
                             // now takes the lower half, so the stage has to be taller for the
                             // menu to have enough clean wall above it to stay readable.
     scrollLength: 1.2,      // scroll spent ON the zoom (0.8 quick / 1.4 balanced / 3 cinematic)
-    holdAtEnd:    0.5,      // EXTRA scroll AFTER the zoom finishes: the completed menu stays
+    holdAtEnd:    0.15,     // EXTRA scroll AFTER the zoom finishes: the completed menu stays
                             // pinned and readable, then the page releases and scrolls on.
                             // 0 = no hold (the old behaviour, releases the instant it lands).
     fitMenuAtEnd: true      // clamp the final menu size so the WHOLE menu fits inside the
@@ -287,7 +287,7 @@ const CONFIG = {
     .vic-photo{position:absolute;inset:0;height:100%;}   /* wall stays the backdrop */
     .vic-wash{position:absolute;}
     /* Menu FIRST (on the wall up top), one clean column, never scaled */
-    .vic-overlay{order:1;position:relative;transform:none !important;padding:clamp(28px,7vw,44px) 22px 12px;}
+    .vic-overlay{order:1;position:relative;transform:none !important;padding:clamp(24px,6vw,36px) 22px 0;}
     .vic-menu-wall{width:100%;}
     .vic-cols{grid-template-columns:1fr;gap:22px;}
     .vic-col h2{min-height:0;}
@@ -295,7 +295,7 @@ const CONFIG = {
     /* Scene BELOW: full-width photo, whole scene visible, no zoom on mobile */
     .vic-subject{order:2;position:relative;inset:auto;top:0;height:auto !important;
       opacity:1 !important;transform:none !important;
-      width:100%;min-height:60vh;background-size:var(--fit,cover);background-position:center bottom;}
+      width:100%;min-height:0;aspect-ratio:16/9;margin-top:-14vw;background-size:100% auto;background-position:center bottom;}
     .vic-cue{display:none;}
   }
 
