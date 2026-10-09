@@ -81,13 +81,15 @@ const CONFIG = {
                             // the zoom plays as it scrolls up through the screen, with no extra
                             // scroll runway below it. "" = old pinned-runway behaviour.
     zeroSpacing:  true,     // strip padding/margin from the Squarespace wrappers around the widget
+    mobileZoomMax:    1.8,  // MOBILE: the scene zooms to this scale as you scroll past it
+    mobileFadeLength: 0.9,  // MOBILE: scroll distance for the zoom + dissolve, in screen heights
     fillSection:  true,     // true = the widget takes 100% of the Squarespace block's width AND
                             // height, so the block/section (its row count) controls the size.
                             // Mobile: menu on top, photo stretches to fill whatever is left.
                             // Desktop: the zoom runway is capped at the block's height.
     maxHeightDesktop: "600px", // HARD CAP on total widget height on desktop (px / vh). The scroll
                             // runway is trimmed to fit, so the pinned stretch gets shorter.
-    maxHeightMobile:  "400px",   // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
+    maxHeightMobile:  "none",   // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
                             // so only set it once you know the content height.
     fitMenuAtEnd: true      // clamp the final menu size so the WHOLE menu fits inside the
                             // stage at the end. Without this a long menu can finish zoomed
@@ -300,34 +302,27 @@ const CONFIG = {
   .vic.is-fixed .vic-cue{display:none;}
   .vic.is-fixed .vic-overlay{padding-bottom:0;}
 
-  /* ---------------- MOBILE: single column on the wall, full photo below ---------------- */
+  /* ---------------- MOBILE: same effect, vertical. ----------------
+     The menu is one long column in normal flow. The shop scene is STICKY at the top of
+     the widget, in FRONT of the menu, taking up no layout space. As you scroll, the
+     scene zooms in and dissolves (driven by JS) and the menu scrolls up behind it,
+     until the plants are gone and it is just the menu on the wall. */
   @media (max-width:760px){
-    /* Natural document flow: no sticky zoom stage that clips, and no tall
-       scroll runway — on a phone the widget is only as tall as its content. */
-    .vic-hero{height:auto !important;max-height:var(--maxM,none);overflow:hidden;}
+    .vic-hero{height:auto !important;max-height:var(--maxM,none);overflow:visible;}
     .vic-sticky{position:static;height:auto;overflow:visible;}
-    .vic-stage{position:static;display:flex;flex-direction:column;}
+    .vic-stage{position:relative;display:block;}
     .vic-photo{position:absolute;inset:0;height:100%;}   /* wall stays the backdrop */
     .vic-wash{position:absolute;}
-    /* Menu FIRST (on the wall up top), one clean column, never scaled */
-    .vic-overlay{order:1;position:relative;transform:none !important;padding:clamp(24px,6vw,36px) 22px 0;}
+    .vic-overlay{position:relative;transform:none !important;padding:clamp(24px,6vw,36px) 22px 28px;}
     .vic-menu-wall{width:100%;}
     .vic-cols{grid-template-columns:1fr;gap:22px;}
     .vic-col h2{min-height:0;}
     .vic-col li{font-size:13px;padding:8px 1px;}
-    /* Scene BELOW: full-width photo, whole scene visible, no zoom on mobile */
-    .vic-subject{order:2;position:relative;inset:auto;top:0;height:auto !important;
-      opacity:1 !important;transform:none !important;
-      width:100%;min-height:0;aspect-ratio:16/9;margin-top:-14vw;background-size:100% auto;background-position:center bottom;}
+    .vic-subject{position:sticky;inset:auto;top:0;bottom:auto;
+      height:100vh;height:100svh;margin-bottom:-100vh;margin-bottom:-100svh;
+      width:100%;background-size:cover;background-position:center bottom;
+      transform-origin:var(--fx,50%) var(--fy,8%);}
     .vic-cue{display:none;}
-    /* FILL: the Squarespace block sets the height. Menu natural at top, photo takes the rest. */
-    .vic.is-fill{height:100%;}
-    .vic.is-fill .vic-hero,.vic.is-fill .vic-sticky,.vic.is-fill .vic-stage{height:100% !important;}
-    .vic.is-fill .vic-hero{overflow:hidden;}
-    .vic.is-fill .vic-stage{min-height:0;}
-    .vic.is-fill .vic-overlay{flex:0 0 auto;}
-    .vic.is-fill .vic-subject{flex:1 1 0;min-height:0;aspect-ratio:auto;margin-top:-14vw;
-      background-size:cover;background-position:center bottom;}
   }
 
   /* ---- SQUARESPACE ESCAPE HATCH ----------------------------------------
@@ -520,13 +515,24 @@ const CONFIG = {
   const menuZoomIn  = S.menuZoomIn  || 1.05;
   const photoZoomMax= S.photoZoomMax || 2.4;
   const photoFadeTo = S.photoFadeTo==null ? 0.0 : S.photoFadeTo;
+  const mobileZoomMax = E.mobileZoomMax || 1.8;
+  const mobileFade    = E.mobileFadeLength || 0.9;
   const isMobile = () => window.matchMedia('(max-width:760px)').matches;
 
   let ticking = false, cueHidden = false;
   function onScroll(){ if(!ticking){requestAnimationFrame(update);ticking=true;} }
   function update(){
     ticking = false;
-    if (isMobile()){ subject.style.transform=''; overlay.style.transform=''; return; }
+    if (isMobile()){
+      // Mobile: same zoom + dissolve, driven by how far the widget has scrolled past the
+      // top of the screen. Done once it has travelled mobileFadeLength screen heights.
+      overlay.style.transform='';
+      const mr = hero.getBoundingClientRect();
+      const mp = Math.min(1, Math.max(0, (-mr.top) / (window.innerHeight * mobileFade)));
+      subject.style.transform = 'scale(' + (1 + (mobileZoomMax - 1) * mp).toFixed(4) + ')';
+      subject.style.opacity = (1 - (1 - photoFadeTo) * Math.min(1, mp / 0.8)).toFixed(3);
+      return;
+    }
 
     const r = hero.getBoundingClientRect();
     // Runway = hero height minus the STICKY height (not the window height —
