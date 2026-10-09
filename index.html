@@ -70,7 +70,7 @@ const CONFIG = {
   /* ---- EMBED: size + width. Start here if the widget feels too big. ---- */
   embed: {
     fullBleed:    true,     // true = edge-to-edge, breaks out of the content column
-    stageHeight:  "600px",   // on-screen height of the scene. Raised from 78vh: the photo band
+    stageHeight:  "100svh",   // on-screen height of the scene. Raised from 78vh: the photo band
                             // now takes the lower half, so the stage has to be taller for the
                             // menu to have enough clean wall above it to stay readable.
     scrollLength: 1.2,      // scroll spent ON the zoom (0.8 quick / 1.4 balanced / 3 cinematic)
@@ -85,7 +85,7 @@ const CONFIG = {
                             // height, so the block/section (its row count) controls the size.
                             // Mobile: menu on top, photo stretches to fill whatever is left.
                             // Desktop: the zoom runway is capped at the block's height.
-    maxHeightDesktop: "600px", // HARD CAP on total widget height on desktop (px / vh). The scroll
+    maxHeightDesktop: "none",  // HARD CAP on total widget height on desktop (px / vh). The scroll
                             // runway is trimmed to fit, so the pinned stretch gets shorter.
     maxHeightMobile:  "none",    // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
                             // so only set it once you know the content height.
