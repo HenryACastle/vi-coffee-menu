@@ -70,14 +70,14 @@ const CONFIG = {
   /* ---- EMBED: size + width. Start here if the widget feels too big. ---- */
   embed: {
     fullBleed:    true,     // true = edge-to-edge, breaks out of the content column
-    stageHeight:  "92vh",   // on-screen height of the scene. Raised from 78vh: the photo band
+    stageHeight:  "600px",   // on-screen height of the scene. Raised from 78vh: the photo band
                             // now takes the lower half, so the stage has to be taller for the
                             // menu to have enough clean wall above it to stay readable.
     scrollLength: 1.2,      // scroll spent ON the zoom (0.8 quick / 1.4 balanced / 3 cinematic)
     holdAtEnd:    0.15,     // EXTRA scroll AFTER the zoom finishes: the completed menu stays
                             // pinned and readable, then the page releases and scrolls on.
                             // 0 = no hold (the old behaviour, releases the instant it lands).
-    desktopHeight: "600px",  // FIXED desktop height. The widget is exactly this tall, NOT pinned:
+    desktopHeight: "",       // FIXED desktop height. The widget is exactly this tall, NOT pinned:
                             // the zoom plays as it scrolls up through the screen, with no extra
                             // scroll runway below it. "" = old pinned-runway behaviour.
     zeroSpacing:  true,     // strip padding/margin from the Squarespace wrappers around the widget
@@ -342,7 +342,7 @@ const CONFIG = {
      ---------------------------------------------------------------------- */
 </style>
 
-<div class="vic is-fixed" id="vicRoot">
+<div class="vic" id="vicRoot">
   <section class="vic-hero" id="vicHero">
     <div class="vic-sticky">
       <div class="vic-stage">
