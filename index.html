@@ -77,6 +77,10 @@ const CONFIG = {
     holdAtEnd:    0.15,     // EXTRA scroll AFTER the zoom finishes: the completed menu stays
                             // pinned and readable, then the page releases and scrolls on.
                             // 0 = no hold (the old behaviour, releases the instant it lands).
+    maxHeightDesktop: "200vh", // HARD CAP on total widget height on desktop (px / vh). The scroll
+                            // runway is trimmed to fit, so the pinned stretch gets shorter.
+    maxHeightMobile:  "none",  // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
+                            // so only set it once you know the content height.
     fitMenuAtEnd: true      // clamp the final menu size so the WHOLE menu fits inside the
                             // stage at the end. Without this a long menu can finish zoomed
                             // past the bottom edge and get clipped during the hold.
@@ -281,7 +285,7 @@ const CONFIG = {
   @media (max-width:760px){
     /* Natural document flow: no sticky zoom stage that clips, and no tall
        scroll runway — on a phone the widget is only as tall as its content. */
-    .vic-hero{height:auto !important;}
+    .vic-hero{height:auto !important;max-height:var(--maxM,none);overflow:hidden;}
     .vic-sticky{position:static;height:auto;overflow:visible;}
     .vic-stage{position:static;display:flex;flex-direction:column;}
     .vic-photo{position:absolute;inset:0;height:100%;}   /* wall stays the backdrop */
@@ -344,6 +348,7 @@ const CONFIG = {
   rs.setProperty('--sans',T.sans);
   rs.setProperty('--menuInk', S.menuInk || '#5b4632');
   if (S.menuTop) rs.setProperty('--menuTop', S.menuTop);
+  rs.setProperty('--maxM', (E.maxHeightMobile && E.maxHeightMobile !== 'none') ? E.maxHeightMobile : 'none');
   rs.setProperty('--sceneH', S.sceneHeight || '100%');
   rs.setProperty('--maskFrom', S.maskTopFrom || '0%');
   rs.setProperty('--maskTo',   S.maskTopTo   || '36%');
@@ -377,12 +382,19 @@ const CONFIG = {
     return n;   // px, or unitless
   }
   let startScale = 0.92, endScale = 1.05;   // recomputed on every layout change
+  function cssLenToPx(v){
+    const m = /^\s*([\d.]+)\s*(px|vh)\s*$/.exec(v || '');
+    return m ? (m[2] === 'vh' ? parseFloat(m[1]) / 100 * window.innerHeight : parseFloat(m[1])) : 0;
+  }
   function measure(){
     rs.setProperty('--vw', document.documentElement.clientWidth + 'px');
     // Total widget height = one stage on screen, + scrollLength stages of zoom,
     // + holdAtEnd stages of the finished menu sitting still before the page moves on.
     const stagePx = sticky.getBoundingClientRect().height || window.innerHeight;
-    rs.setProperty('--heroH', Math.round(stagePx * (1 + runwayStages)) + 'px');
+    let heroPx = Math.round(stagePx * (1 + runwayStages));
+    const capPx = cssLenToPx(E.maxHeightDesktop);
+    if (capPx > 0) heroPx = Math.max(Math.round(stagePx), Math.min(heroPx, capPx));
+    rs.setProperty('--heroH', heroPx + 'px');
 
     // Fit the menu twice over. offsetHeight is the UNTRANSFORMED layout height, so the
     // measurement is not polluted by the scale we are currently applying.
