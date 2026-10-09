@@ -77,9 +77,13 @@ const CONFIG = {
     holdAtEnd:    0.15,     // EXTRA scroll AFTER the zoom finishes: the completed menu stays
                             // pinned and readable, then the page releases and scrolls on.
                             // 0 = no hold (the old behaviour, releases the instant it lands).
-    maxHeightDesktop: "150vh", // HARD CAP on total widget height on desktop (px / vh). The scroll
+    fillSection:  true,     // true = the widget takes 100% of the Squarespace block's width AND
+                            // height, so the block/section (its row count) controls the size.
+                            // Mobile: menu on top, photo stretches to fill whatever is left.
+                            // Desktop: the zoom runway is capped at the block's height.
+    maxHeightDesktop: "none",  // HARD CAP on total widget height on desktop (px / vh). The scroll
                             // runway is trimmed to fit, so the pinned stretch gets shorter.
-    maxHeightMobile:  "40vh",   // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
+    maxHeightMobile:  "none",   // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
                             // so only set it once you know the content height.
     fitMenuAtEnd: true      // clamp the final menu size so the WHOLE menu fits inside the
                             // stage at the end. Without this a long menu can finish zoomed
@@ -301,6 +305,14 @@ const CONFIG = {
       opacity:1 !important;transform:none !important;
       width:100%;min-height:0;aspect-ratio:16/9;margin-top:-14vw;background-size:100% auto;background-position:center bottom;}
     .vic-cue{display:none;}
+    /* FILL: the Squarespace block sets the height. Menu natural at top, photo takes the rest. */
+    .vic.is-fill{height:100%;}
+    .vic.is-fill .vic-hero,.vic.is-fill .vic-sticky,.vic.is-fill .vic-stage{height:100% !important;}
+    .vic.is-fill .vic-hero{overflow:hidden;}
+    .vic.is-fill .vic-stage{min-height:0;}
+    .vic.is-fill .vic-overlay{flex:0 0 auto;}
+    .vic.is-fill .vic-subject{flex:1 1 0;min-height:0;aspect-ratio:auto;margin-top:-14vw;
+      background-size:cover;background-position:center bottom;}
   }
 
   /* ---- SQUARESPACE ESCAPE HATCH ----------------------------------------
@@ -369,6 +381,14 @@ const CONFIG = {
   /* ---- WIDTH: full-bleed breakout, measured against the viewport width
          EXCLUDING the scrollbar so it never causes sideways scroll. ---- */
   if (E.fullBleed !== false) root.classList.add('is-fullbleed');
+
+  /* ---- FILL: hand the height to the Squarespace block. Every wrapper between the
+         widget and the block gets height:100%, so the block's own size is the size. ---- */
+  const fillBlock = (E.fillSection !== false) ? root.closest('.sqs-block, .fe-block') : null;
+  if (fillBlock){
+    root.classList.add('is-fill');
+    for (let n = root.parentElement; n && n !== fillBlock; n = n.parentElement) n.style.height = '100%';
+  }
   const sceneFrac = Math.min(1, Math.max(0.05, (parseFloat(S.sceneHeight) || 100) / 100));
   const maskToFrac = Math.min(1, Math.max(0, (parseFloat(S.maskTopTo) || 36) / 100));
   // Resolve a css-ish length ("400px" / "9vh" / "12%") to pixels. % is of the stage.
@@ -392,7 +412,11 @@ const CONFIG = {
     // + holdAtEnd stages of the finished menu sitting still before the page moves on.
     const stagePx = sticky.getBoundingClientRect().height || window.innerHeight;
     let heroPx = Math.round(stagePx * (1 + runwayStages));
-    const capPx = cssLenToPx(E.maxHeightDesktop);
+    let capPx = cssLenToPx(E.maxHeightDesktop);
+    if (fillBlock){
+      const bh = fillBlock.getBoundingClientRect().height;
+      if (bh > 0) capPx = capPx > 0 ? Math.min(capPx, bh) : bh;
+    }
     if (capPx > 0) heroPx = Math.max(Math.round(stagePx), Math.min(heroPx, capPx));
     rs.setProperty('--heroH', heroPx + 'px');
 
