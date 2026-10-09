@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  VI COFFEE BAR — Menu Scene Widget   (Venture Victory)
+  Composition-Coffee style: a full-screen shop photo with the subjects at the
+  bottom, and the menu text sitting DIRECTLY on the wall at the top. On scroll
+  the photo zooms into the wall and dissolves, leaving just the menu.
+  ----------------------------------------------------------------------------
+  HOW TO EMBED — SQUARESPACE CODE BLOCK
+
+    1. Edit the page -> add a Code Block -> paste EVERYTHING between the two
+       >>> PASTE FROM HERE <<< markers below. You do NOT paste <html>, <head>
+       or <body>; the Squarespace page already has them.
+    2. Save, then view the LIVE or PREVIEW site. Squarespace does NOT run
+       JavaScript inside the editor - in edit mode you will only ever see a
+       grey "Code Block" placeholder. Not a bug; judge it on the live page.
+    3. Code Blocks need a Business plan or higher. On Personal they do not
+       exist, and the widget would have to be iframe-hosted instead.
+
+  THE TWO KNOBS THAT CONTROL SIZE AND WIDTH - both in CONFIG.embed:
+
+    fullBleed   true  -> the scene breaks out of Squarespace's centered content
+                         column and runs edge to edge. Set false to stay inside
+                         the column.
+    stageHeight how tall the scene is on screen. "100vh" = fills the screen.
+                "78vh" leaves the next section peeking. "620px" is a fixed box.
+    scrollLength how much page scroll the zoom takes, in stage-heights.
+                 0.8 = quick. 1.4 = balanced (default). 3 = the old cinematic
+                 length.
+    holdAtEnd   extra scroll AFTER the zoom lands, in stage-heights. The finished
+                 menu stays pinned and readable for this long, then the page
+                 releases and scrolls on normally. 0.6 = default (a beat to read
+                 it). 0 = release the instant the zoom lands.
+
+    TOTAL HEIGHT = stageHeight x (1 + scrollLength + holdAtEnd).
+    If the widget feels "too tall" and pushes the rest of the page down, LOWER
+    scrollLength first, then holdAtEnd, then stageHeight.
+
+  FULL WIDTH: the CSS breakout below handles it on its own. To make it exact,
+  also set the SECTION to full width in the 7.1 section editor and drag its
+  side padding to 0 - otherwise you are fighting the section's own gutter.
+
+  Nothing here styles the host page: every rule is scoped to .vic and every CSS
+  variable lives on the widget's own root, not on <html>.
+
+  IF THE ZOOM WILL NOT PIN: position:sticky dies under an ancestor with
+  overflow:hidden or a transform, and some Squarespace sections have both.
+  Uncomment the section-id override at the bottom of the <style> block.
+
+  THE PHOTO: set CONFIG.scene.photo to the shop photo URL. Upload it in
+  Squarespace, copy the resulting /content/ URL, and paste it here — do NOT
+  ship the base64 placeholders to the live site (they make this file 650KB+).
+  Use a wide landscape photo with the PEOPLE / MACHINE toward the BOTTOM and
+  empty wall up top; that top wall is where the menu sits.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VI Coffee Bar — Menu</title>
+</head>
+<body style="margin:0">
+
+<!-- ======================= >>> PASTE FROM HERE <<< ======================= -->
+<script>
+/* ============================ CONFIG — EDIT ME ============================ */
+const CONFIG = {
+
+  /* ---- EMBED: size + width. Start here if the widget feels too big. ---- */
+  embed: {
+    fullBleed:    true,     // true = edge-to-edge, breaks out of the content column
+    stageHeight:  "92vh",   // on-screen height of the scene. Raised from 78vh: the photo band
+                            // now takes the lower half, so the stage has to be taller for the
+                            // menu to have enough clean wall above it to stay readable.
+    scrollLength: 1.2,      // scroll spent ON the zoom (0.8 quick / 1.4 balanced / 3 cinematic)
+    holdAtEnd:    0.15,     // EXTRA scroll AFTER the zoom finishes: the completed menu stays
+                            // pinned and readable, then the page releases and scrolls on.
+                            // 0 = no hold (the old behaviour, releases the instant it lands).
+    fillSection:  false,     // true = the widget takes 100% of the Squarespace block's width AND
+                            // height, so the block/section (its row count) controls the size.
+                            // Mobile: menu on top, photo stretches to fill whatever is left.
+                            // Desktop: the zoom runway is capped at the block's height.
+    maxHeightDesktop: "600px", // HARD CAP on total widget height on desktop (px / vh). The scroll
+                            // runway is trimmed to fit, so the pinned stretch gets shorter.
+    maxHeightMobile:  "none",   // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
+                            // so only set it once you know the content height.
+    fitMenuAtEnd: true      // clamp the final menu size so the WHOLE menu fits inside the
+                            // stage at the end. Without this a long menu can finish zoomed
+                            // past the bottom edge and get clipped during the hold.
+  },
+
+  scene: {
+    heading: "Our Menu Selections",           // big title painted at the top of the wall
+
+    // ---------------------------------------------------------------------------------
+    // WIDE SHOP PHOTO, BACKGROUND REMOVED - now served from Squarespace rather than
+    // inlined, which takes this file from 2.6MB to ~29KB.
+    //
+    // Ceiling, both pendant lamps and the navy wall are transparent, so the menu sits
+    // BEHIND the plants and cups as if painted on the wall. Cut with
+    // attachments/vi-coffee/make-cutout.js (pure JS, jpeg-js + pngjs); settings live in
+    // make-cutout-args.json and the untouched original is vi-shop-wide.jpg, so the whole
+    // cut is reproducible rather than a one-off.
+    //
+    // Do NOT add "&format=..." to this URL. The CDN ignores the width and returns the
+    // same 1500x844 palette PNG for every value, where the bare URL content-negotiates
+    // to a full 2500x1406 WebP at ~729KB with the alpha channel intact (verified).
+    // Whatever replaces this must keep alpha - PNG or WebP, never JPEG, or the 37%
+    // that is transparent composites onto white and the effect is gone.
+    // ---------------------------------------------------------------------------------
+    photo:   "https://images.squarespace-cdn.com/content/64d80f0f1e485f764cd2c547/98bf10ec-80a0-4279-be4c-a36d25948cfd/vi-shop-wide-cutout-2500-compressed.png?content-type=image%2Fpng",
+    bgImage: "https://images.squarespace-cdn.com/content/64d80f0f1e485f764cd2c547/a40bb699-179d-495c-a7f0-1b41ded8808b/vi-wall-tile_compressed.png?content-type=image%2Fpng",
+
+    // THE BAND: photo occupies only the BOTTOM this much of the stage. Back to 100% now
+    // that maskTop clears the space instead - a mask blends the photo into the wall,
+    // where a band cut it off with a hard edge AND tightened the crop.
+    sceneHeight: "100%",
+
+    photoPos:   "center bottom", // landscape source is barely cropped, so keep the scene low
+
+    // REMOVE THE CEILING. A vertical alpha mask fades the top of the photo away to nothing,
+    // so the ceiling tiles and pendant lights dissolve into the wall and the menu sits on
+    // clean plaster. Done in CSS against the live photo: the source file is untouched, there
+    // is no cut-out to commission or redo, and it works on whatever photo you point it at.
+    //   maskTopFrom - above this the photo is fully gone   (0% = the very top edge)
+    //   maskTopTo   - below this the photo is fully solid  (raise it to erase more)
+    // Bands in this photo: ceiling+lights 0-28%, navy wall 20-45%, plants 15-70%,
+    // cups 25-80%, machine 70-100%. 50% clears the ceiling, both pendants and the
+    // upper plants, and buys the vertical room that menuGap below needs.
+    maskTopFrom: "0%",           // OFF. The photo is a real cutout now, so there is
+    maskTopTo:   "0%",           // nothing to fade - set maskTopTo back to ~50% only
+                                 // if you swap in a photo that still has its ceiling.
+
+    photoBlend: "normal",        // "multiply" is the fake-cutout hack for opaque photos; the
+                                 // mask above is the real mechanism now, so keep this normal.
+    photoFit:   "cover",         // FULL WIDTH. With a 16:9 source in a ~1.9:1 stage this now
+                                 // crops almost nothing (92-100% of the image survives).
+
+    bgLight:  0.99,              // 0-1 white wash over the background (0.99 = barely perceptible)
+    focusX: 50,  focusY: 8,      // the point on the wall the zoom pushes toward (photo + menu anchor)
+    photoZoomMax: 2.4,           // photo zooms IN to this scale by the end of the scroll
+    photoFadeTo:  0.0,           // photo fades to this opacity by the end (0 = fully gone)
+    menuStart:    0.92,          // menu size on initial load. Auto-reduced if it would not fit
+                                 // the clear space above the photo, so it is never half-hidden.
+    menuZoomIn:   1.05,          // menu grows to this by the end
+    menuRoom: "66%",             // how much of the stage height the menu may occupy. With a
+                                 // cut-out photo there is no solid line to measure against, so
+                                 // this states it outright. Raise it and the menu runs further
+                                 // down behind the plants; lower it to keep it clear of them.
+    menuGap:  "4vh",             // BREATHING ROOM between the bottom of the menu and the line
+                                 // where the photo goes solid (maskTopTo). The menu is scaled
+                                 // down as needed to keep this clear, so it never crowds the
+                                 // plants. Accepts px / vh / % of the stage. Budget check:
+                                 // clear space = stage x maskTopTo - menuTop - menuGap, so a
+                                 // big gap needs a big maskTopTo. See the console warning.
+    menuTop:  "2.5vh",           // how far down the wall the menu starts. LOWER = higher up.
+                                 // Was an implicit clamp(24px,6vh,80px); 2.5vh lifts it.
+    menuInk:  "#5b4632",         // warm brown menu text on the wall
+    wash:     0.22               // 0-1: soft wall tint behind the menu (readability)
+  },
+
+  theme: {
+    wall:    "#e9e2d6",  // placeholder wall / scene tint (warm plaster)
+    ink:     "#211b16",  // main text
+    muted:   "#6f6152",  // descriptions, leader lines
+    accent:  "#c98b6b",  // prices + small accents (VI's warm tone)
+    paper:   "#faf5ee",  // full-menu background
+    serif:   "Georgia, 'Times New Roman', serif",       // headings
+    sans:    "'Helvetica Neue', Arial, sans-serif"      // item names
+  },
+
+  /* ---- THE MENU (extracted from the VI board — add prices when ready) ---- */
+  menu: [
+    { section: "COFFEE", items: [
+      { name: "Drip Coffee",  desc: "Regular cup of joe",                        price: "" },
+      { name: "Espresso",     desc: "Double shot of espresso, 2oz",             price: "" },
+      { name: "Cortado",      desc: "Double shot of espresso & 2oz milk",       price: "" },
+      { name: "Cappuccino",   desc: "Double shot of espresso & 6oz milk",       price: "" },
+      { name: "Latte",        desc: "Double shot of espresso & 10oz milk",      price: "" },
+      { name: "Cold Brew",    desc: "Cold-steeped in house for 20 hours",       price: "" },
+      { name: "Americano",    desc: "Double shot of espresso + water",          price: "" }
+    ]},
+    { section: "Matcha & Not Coffee", items: [
+      { name: "Matcha Latte",                  desc: "Green tea powder (sweet, unsweet, half sweet) with milk", price: "" },
+      { name: "Passionfruit Hibiscus Refresher", desc: "Passionfruit lemonade & hibiscus tea",                 price: "" },
+      { name: "Iced Tea-Lemonade",             desc: "Half lemonade, half iced tea",                            price: "" },
+      { name: "Housemade Lemonade",            desc: "",                                                        price: "" },
+      { name: "London Fog",                    desc: "Earl grey tea, vanilla, steamed milk",                    price: "" },
+      { name: "Chai Latte",                    desc: "Spiced black tea mixed with milk",                        price: "" }
+    ]},
+    { section: "Kitchen", items: [
+      { name: "VI Egg Sandwich",      desc: "Bacon, egg, cheddar, arugula & VI Sauce on a brioche bun. Make it guilt-free: swap the bun for a 100-cal whole-grain English muffin.", price: "" },
+      { name: "Avocado Toast",        desc: "Seasoned smashed real avocado, red pepper flakes, flaky salt & lemon. Add a scrambled egg +.", price: "" },
+      { name: "VI Famous Caesar Wrap or Salad", desc: "House-made caesar, romaine, sourdough croutons, Parmesan & roasted chicken in a flour tortilla. Buffalo option available.", price: "" },
+      { name: "The Schmear",          desc: "Bagel with cream cheese",                                          price: "" },
+      { name: "Breakfast Tacos",      desc: "Bacon, egg & cheese on flour tortillas with salsa (2 per order)",  price: "" },
+      { name: "The O.G.",             desc: "Bagel with bacon, egg, cheese & VI Sauce",                         price: "" },
+      { name: "Chicken Salad Sandwich", desc: "Roasted chicken salad, celery, grapes & green onion with lettuce on a toasted french roll", price: "" }
+    ]}
+  ],
+
+  footerNote: "More detailed menu at register · @vicoffeebar"
+};
+/* ========================== END CONFIG — EDIT ME ========================== */
+</script>
+
+<style>
+  /* Everything is scoped to .vic so the host site's own styles are untouched,
+     and the host's styles can't reach in and break the scene. */
+  .vic, .vic *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+
+  .vic{
+    /* --stage and --heroH are written by JS from CONFIG.embed */
+    --stage:78vh;
+    position:relative;
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.35;
+  }
+
+  /* ---- FULL WIDTH: break out of the site's centered content column ----
+     --vw is the viewport width EXCLUDING the scrollbar, measured in JS, so
+     this never creates a sideways scrollbar the way plain 100vw does. */
+  .vic.is-fullbleed{
+    width:var(--vw,100vw);
+    max-width:var(--vw,100vw);
+    margin-left:calc(50% - (var(--vw,100vw) / 2));
+    margin-right:calc(50% - (var(--vw,100vw) / 2));
+  }
+
+  /* ---------------- Hero: the scene that zooms into the wall ---------------- */
+  .vic-hero{position:relative;height:var(--heroH,187vh);}
+  .vic-sticky{position:sticky;top:0;height:var(--stage);overflow:hidden;background:var(--wall);}
+  .vic-stage{position:absolute;inset:0;}
+
+  /* Wall backdrop — always fills the whole stage (the menu sits on it up top) */
+  .vic-photo{position:absolute;inset:0;
+    background:
+      radial-gradient(120% 70% at 50% 2%, rgba(255,255,255,.6), transparent 60%),
+      linear-gradient(180deg, #efe6d6 0%, #e6dbc8 55%, #d9cdb7 100%);}
+
+  /* The shop scene — full-bleed; sits IN FRONT of the menu so the menu reads as
+     painted on the wall behind the baristas. Zooms + dissolves on scroll. */
+  .vic-subject{position:absolute;left:0;right:0;bottom:0;top:auto;height:var(--sceneH,100%);
+    z-index:3;pointer-events:none;
+    -webkit-mask-image:linear-gradient(180deg,transparent var(--maskFrom,0%),#000 var(--maskTo,36%));
+            mask-image:linear-gradient(180deg,transparent var(--maskFrom,0%),#000 var(--maskTo,36%));
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+    background-size:var(--fit,cover);background-repeat:no-repeat;
+    background-position:var(--pp,center bottom);
+    transform-origin:var(--fx,50%) var(--fy,8%);will-change:transform,opacity;}
+
+  /* Soft wall tint behind the top of the menu for readability (not a card) */
+  .vic-wash{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:var(--wash,.28);
+    background:linear-gradient(180deg, var(--wall) 0%, var(--wall) 10%, transparent 42%);}
+
+  /* Menu painted on the wall — behind the scene; pinned to top, zooms in */
+  .vic-overlay{position:absolute;left:0;right:0;top:0;z-index:2;text-align:center;
+    padding:var(--menuTop,clamp(24px,6vh,80px)) 24px 20px;transform-origin:50% 0;will-change:transform;}
+  .vic-menu-wall{width:min(1100px,92%);margin:0 auto;}
+
+  .vic-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,3.4vw,56px);text-align:left;}
+  .vic-col h2{
+    font-family:var(--serif);font-weight:700;margin:0 0 14px;color:var(--menuInk);
+    font-size:clamp(16px,1.7vw,21px);letter-spacing:.16em;text-transform:uppercase;text-align:left;
+    line-height:1.15;min-height:2.3em;   /* reserve 2 lines so every column's items start at the same Y */
+  }
+  .vic-col ul{list-style:none;margin:0;padding:0;}
+  .vic-col li{display:flex;align-items:baseline;gap:10px;padding:9px 1px;
+    border-bottom:2px solid color-mix(in srgb, var(--menuInk) 85%, transparent);
+    color:var(--menuInk);font-size:clamp(14px,1.3vw,16.5px);letter-spacing:.12em;text-transform:uppercase;}
+  .vic-col li .vic-nm{flex:1;}
+  .vic-col li .vic-pr{font-variant-numeric:tabular-nums;font-weight:700;}
+
+  /* Scroll cue: ABSOLUTE inside the scene. (position:fixed would float it over
+     the entire host site, including sections far below this widget.) */
+  .vic-cue{
+    position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:8;
+    color:var(--menuInk);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    transition:opacity .4s ease;pointer-events:none;
+  }
+  .vic-cue .vic-chev{animation:vic-bob 1.5s ease-in-out infinite;font-size:14px;}
+  @keyframes vic-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+  @media (prefers-reduced-motion:reduce){.vic-cue .vic-chev{animation:none;}}
+
+  /* ---------------- MOBILE: single column on the wall, full photo below ---------------- */
+  @media (max-width:760px){
+    /* Natural document flow: no sticky zoom stage that clips, and no tall
+       scroll runway — on a phone the widget is only as tall as its content. */
+    .vic-hero{height:auto !important;max-height:var(--maxM,none);overflow:hidden;}
+    .vic-sticky{position:static;height:auto;overflow:visible;}
+    .vic-stage{position:static;display:flex;flex-direction:column;}
+    .vic-photo{position:absolute;inset:0;height:100%;}   /* wall stays the backdrop */
+    .vic-wash{position:absolute;}
+    /* Menu FIRST (on the wall up top), one clean column, never scaled */
+    .vic-overlay{order:1;position:relative;transform:none !important;padding:clamp(24px,6vw,36px) 22px 0;}
+    .vic-menu-wall{width:100%;}
+    .vic-cols{grid-template-columns:1fr;gap:22px;}
+    .vic-col h2{min-height:0;}
+    .vic-col li{font-size:13px;padding:8px 1px;}
+    /* Scene BELOW: full-width photo, whole scene visible, no zoom on mobile */
+    .vic-subject{order:2;position:relative;inset:auto;top:0;height:auto !important;
+      opacity:1 !important;transform:none !important;
+      width:100%;min-height:0;aspect-ratio:16/9;margin-top:-14vw;background-size:100% auto;background-position:center bottom;}
+    .vic-cue{display:none;}
+    /* FILL: the Squarespace block sets the height. Menu natural at top, photo takes the rest. */
+    .vic.is-fill{height:100%;}
+    .vic.is-fill .vic-hero,.vic.is-fill .vic-sticky,.vic.is-fill .vic-stage{height:100% !important;}
+    .vic.is-fill .vic-hero{overflow:hidden;}
+    .vic.is-fill .vic-stage{min-height:0;}
+    .vic.is-fill .vic-overlay{flex:0 0 auto;}
+    .vic.is-fill .vic-subject{flex:1 1 0;min-height:0;aspect-ratio:auto;margin-top:-14vw;
+      background-size:cover;background-position:center bottom;}
+  }
+
+  /* ---- SQUARESPACE ESCAPE HATCH ----------------------------------------
+     Squarespace wraps code blocks in padded, sometimes clipped containers.
+     If the scene is inset, or the sticky zoom refuses to pin, uncomment and
+     replace SECTION-ID with the section's id from the browser inspector:
+
+     #SECTION-ID .content-wrapper,
+     #SECTION-ID .sqs-block-content,
+     #SECTION-ID .sqs-block.code-block{ padding:0 !important; max-width:none !important; }
+     #SECTION-ID, #SECTION-ID .page-section{ overflow:visible !important; }
+     ---------------------------------------------------------------------- */
+</style>
+
+<div class="vic" id="vicRoot">
+  <section class="vic-hero" id="vicHero">
+    <div class="vic-sticky">
+      <div class="vic-stage">
+        <div class="vic-photo"></div>
+        <div class="vic-subject" id="vicSubject"></div>
+        <div class="vic-wash"></div>
+        <div class="vic-overlay" id="vicOverlay"></div>
+      </div>
+      <div class="vic-cue" id="vicCue"><span>Scroll</span><span class="vic-chev">&#8595;</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const S = CONFIG.scene, T = CONFIG.theme, MENU = CONFIG.menu || [], E = CONFIG.embed || {};
+  const root    = document.getElementById('vicRoot');
+  const hero    = document.getElementById('vicHero');
+  const sticky  = hero.querySelector('.vic-sticky');
+  const subject = document.getElementById('vicSubject');
+  const overlay = document.getElementById('vicOverlay');
+  const cue     = document.getElementById('vicCue');
+
+  /* ---- Theme vars go on the WIDGET's root, not <html>, so nothing leaks
+         into the host site's own CSS variables. ---- */
+  const rs = root.style;
+  rs.setProperty('--wall',T.wall); rs.setProperty('--ink',T.ink);
+  rs.setProperty('--muted',T.muted); rs.setProperty('--accent',T.accent);
+  rs.setProperty('--paper',T.paper); rs.setProperty('--serif',T.serif);
+  rs.setProperty('--sans',T.sans);
+  rs.setProperty('--menuInk', S.menuInk || '#5b4632');
+  if (S.menuTop) rs.setProperty('--menuTop', S.menuTop);
+  rs.setProperty('--maxM', (E.maxHeightMobile && E.maxHeightMobile !== 'none') ? E.maxHeightMobile : 'none');
+  rs.setProperty('--sceneH', S.sceneHeight || '100%');
+  rs.setProperty('--maskFrom', S.maskTopFrom || '0%');
+  rs.setProperty('--maskTo',   S.maskTopTo   || '36%');
+  rs.setProperty('--pp', S.photoPos || 'center bottom');
+  rs.setProperty('--fit', S.photoFit || 'cover');
+  rs.setProperty('--fx', (S.focusX==null?50:S.focusX)+'%');
+  rs.setProperty('--fy', (S.focusY==null?8:S.focusY)+'%');
+  rs.setProperty('--wash', (S.wash==null?0.22:S.wash));
+
+  /* ---- SIZE: stage height + scroll runway, both from CONFIG.embed ---- */
+  const stageHeight  = E.stageHeight || '78vh';
+  const scrollLength = E.scrollLength==null ? 1.4 : Math.max(0, E.scrollLength);
+  const holdAtEnd    = E.holdAtEnd==null   ? 0.6 : Math.max(0, E.holdAtEnd);
+  const fitMenuAtEnd = E.fitMenuAtEnd !== false;
+  const runwayStages = scrollLength + holdAtEnd;   // total scrollable runway, in stage-heights
+  rs.setProperty('--stage', stageHeight);
+
+  /* ---- WIDTH: full-bleed breakout, measured against the viewport width
+         EXCLUDING the scrollbar so it never causes sideways scroll. ---- */
+  if (E.fullBleed !== false) root.classList.add('is-fullbleed');
+
+  /* ---- FILL: hand the height to the Squarespace block. Every wrapper between the
+         widget and the block gets height:100%, so the block's own size is the size. ---- */
+  const fillBlock = (E.fillSection !== false) ? root.closest('.sqs-block, .fe-block') : null;
+  if (fillBlock){
+    root.classList.add('is-fill');
+    for (let n = root.parentElement; n && n !== fillBlock; n = n.parentElement) n.style.height = '100%';
+  }
+  const sceneFrac = Math.min(1, Math.max(0.05, (parseFloat(S.sceneHeight) || 100) / 100));
+  const maskToFrac = Math.min(1, Math.max(0, (parseFloat(S.maskTopTo) || 36) / 100));
+  // Resolve a css-ish length ("400px" / "9vh" / "12%") to pixels. % is of the stage.
+  function toPx(v, stagePx){
+    if (v == null) return 0;
+    const n = parseFloat(v); if (!isFinite(n)) return 0;
+    const u = String(v).replace(/^[-\d.\s]+/, '').trim().toLowerCase();
+    if (u === 'vh') return n / 100 * window.innerHeight;
+    if (u === 'vw') return n / 100 * document.documentElement.clientWidth;
+    if (u === '%')  return n / 100 * stagePx;
+    return n;   // px, or unitless
+  }
+  let startScale = 0.92, endScale = 1.05;   // recomputed on every layout change
+  function cssLenToPx(v){
+    const m = /^\s*([\d.]+)\s*(px|vh)\s*$/.exec(v || '');
+    return m ? (m[2] === 'vh' ? parseFloat(m[1]) / 100 * window.innerHeight : parseFloat(m[1])) : 0;
+  }
+  function measure(){
+    rs.setProperty('--vw', document.documentElement.clientWidth + 'px');
+    // Total widget height = one stage on screen, + scrollLength stages of zoom,
+    // + holdAtEnd stages of the finished menu sitting still before the page moves on.
+    // maxHeightDesktop caps the VISIBLE stage. The zoom still needs scroll distance
+    // beyond it, so the runway is only trimmed to the Squarespace block when that is taller.
+    const stageCap = cssLenToPx(E.maxHeightDesktop);
+    rs.setProperty('--stage', stageCap > 0 ? 'min(' + stageHeight + ',' + stageCap + 'px)' : stageHeight);
+    const stagePx = sticky.getBoundingClientRect().height || window.innerHeight;
+    let heroPx = Math.round(stagePx * (1 + runwayStages));
+    if (fillBlock){
+      const bh = fillBlock.getBoundingClientRect().height;
+      if (bh > stagePx) heroPx = Math.min(heroPx, Math.round(bh));
+    }
+    rs.setProperty('--heroH', heroPx + 'px');
+
+    // Fit the menu twice over. offsetHeight is the UNTRANSFORMED layout height, so the
+    // measurement is not polluted by the scale we are currently applying.
+    //   startScale - must fit the CLEAN WALL above the photo band, so the menu is fully
+    //                legible from the very first frame rather than half behind the photo.
+    //   endScale   - must fit the WHOLE stage, since by then the photo has dissolved.
+    startScale = menuStart; endScale = menuZoomIn;
+    const natural = overlay.offsetHeight;
+    if (natural > 0){
+      // Where does the photo actually become solid? Top of the band, plus the masked
+      // fade inside it. With sceneHeight 100% that is simply stage x maskTopTo.
+      // (Using the old stage x (1 - sceneFrac) here gave 0 once the band went back to
+      // 100%, which drove startScale to 0 and made the menu vanish on load.)
+      // Where may the menu reach down to? menuRoom states it directly. Falling back to the
+      // masked-fade line keeps older configs working, but with a cut-out photo maskTopTo is
+      // 0, which would leave zero clearance and floor the menu at its minimum scale.
+      const roomFrac = S.menuRoom != null ? (parseFloat(S.menuRoom) || 0) / 100
+                     : (1 - sceneFrac) + sceneFrac * maskToFrac;
+      const solidAt = stagePx * roomFrac;
+      const gapPx   = toPx(S.menuGap, stagePx);
+      const topPx   = parseFloat(getComputedStyle(overlay).paddingTop) || 0;
+      const clearPx = solidAt - topPx - gapPx;
+
+      startScale = Math.min(menuStart, clearPx / natural);
+      if (startScale < 0.3) startScale = 0.3;             // never collapse to nothing
+      if (fitMenuAtEnd) endScale = Math.min(menuZoomIn, stagePx / natural);
+      if (endScale < startScale) endScale = startScale;   // never shrink as it scrolls
+
+      if (clearPx / natural < 0.5 && window.console){
+        console.warn('[VI menu] Tight fit. Menu room ends at ' + Math.round(solidAt)
+          + 'px; menuTop ' + Math.round(topPx) + 'px + menuGap ' + Math.round(gapPx)
+          + 'px leaves ' + Math.round(clearPx) + 'px for a menu that wants '
+          + Math.round(natural) + 'px, so it is scaled to ' + startScale.toFixed(2)
+          + '. Raise scene.menuRoom or embed.stageHeight, or lower scene.menuGap.');
+      }
+    }
+  }
+
+  /* Static background behind everything (the light wall the menu ends up on) */
+  const photoWall = root.querySelector('.vic-photo');
+  const hasBg = S.bgImage && !/^REPLACE_WITH/.test(S.bgImage);
+  if (hasBg){
+    const L = S.bgLight==null ? 0.82 : S.bgLight;
+    photoWall.style.background =
+      'linear-gradient(rgba(255,255,255,'+L+'),rgba(255,255,255,'+L+')), url("'+S.bgImage+'") center/cover no-repeat';
+  }
+
+  /* Shop scene over the wall backdrop; zooms + dissolves on scroll */
+  const hasPhoto = S.photo && !/^REPLACE_WITH/.test(S.photo);
+  if (hasPhoto){ subject.style.backgroundImage = 'url("'+S.photo+'")'; }
+  if (S.photoBlend==='multiply') subject.style.mixBlendMode = 'multiply';
+
+  /* Overlay = ALL sections on the wall (grid: 3-across / stacked), always visible */
+  let wall = '<div class="vic-menu-wall"><div class="vic-cols">';
+  MENU.forEach(sec=>{
+    wall += '<div class="vic-col"><h2>'+sec.section+'</h2><ul>';
+    sec.items.forEach(it=>{
+      wall += '<li><span class="vic-nm">'+it.name+'</span>'+
+              (it.price ? '<span class="vic-pr">'+it.price+'</span>' : '')+'</li>';
+    });
+    wall += '</ul></div>';
+  });
+  wall += '</div></div>';
+  overlay.innerHTML = wall;
+
+  /* ---- On scroll: the scene ZOOMS INTO the wall — photo scales up and
+         dissolves, menu grows with it. ---- */
+  const menuStart   = S.menuStart==null ? 0.62 : S.menuStart;
+  const menuZoomIn  = S.menuZoomIn  || 1.05;
+  const photoZoomMax= S.photoZoomMax || 2.4;
+  const photoFadeTo = S.photoFadeTo==null ? 0.0 : S.photoFadeTo;
+  const isMobile = () => window.matchMedia('(max-width:760px)').matches;
+
+  let ticking = false, cueHidden = false;
+  function onScroll(){ if(!ticking){requestAnimationFrame(update);ticking=true;} }
+  function update(){
+    ticking = false;
+    if (isMobile()){ subject.style.transform=''; overlay.style.transform=''; return; }
+
+    const r = hero.getBoundingClientRect();
+    // Runway = hero height minus the STICKY height (not the window height —
+    // the stage can be shorter than the screen, e.g. 78vh).
+    const total = r.height - sticky.getBoundingClientRect().height;
+    let p = total>0 ? (-r.top)/total : 0;          // 0..1 across the WHOLE runway
+    p = Math.min(1, Math.max(0, p));
+
+    // Remap: the zoom finishes after scrollLength stages, then `a` sits at 1 for the
+    // holdAtEnd stages that follow — the menu is done and simply stays put, still
+    // pinned, until the runway runs out and the page scrolls on normally.
+    let a = (scrollLength <= 0) ? 1 : p * (runwayStages / scrollLength);
+    a = Math.min(1, Math.max(0, a));
+
+    const photoScale = 1 + (photoZoomMax - 1) * a;
+    const fp = Math.min(1, a / 0.62);            // fully faded by ~62% of the ZOOM
+    subject.style.transform = 'scale('+photoScale.toFixed(4)+')';
+    subject.style.opacity = (1 - (1 - photoFadeTo) * fp).toFixed(3);
+
+    const menuScale = startScale + (endScale - startScale) * a;
+    overlay.style.transform = 'scale('+menuScale.toFixed(4)+')';
+
+    if (a>0.02 && !cueHidden){ cueHidden=true; cue.style.opacity='0'; }
+    if (a<=0.02 && cueHidden){ cueHidden=false; cue.style.opacity='1'; }
+  }
+
+  function relayout(){ measure(); update(); }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('resize', relayout);
+  window.addEventListener('orientationchange', relayout);
+  relayout();
+})();
+</script>
+
+<script>
+/* ===== AUTO-SIZE THE SQUARESPACE SECTION (mobile) =====================================
+   Squarespace Fluid Engine reserves a fixed number of grid rows for a code block, which
+   leaves white space when the widget is shorter. On mobile this measures nothing and
+   guesses nothing: it tells the enclosing grid to size its row to the widget's own
+   content. Works only when the widget is the SOLE block in its section; otherwise it
+   leaves the layout alone and logs a console warning. Desktop is untouched.
+   Switch off with window.VIC_AUTOSIZE = false before this script.                    */
+(function(){
+  if (window.VIC_AUTOSIZE === false) return;
+  const root = document.getElementById('vicRoot');
+  if (!root) return;
+  const mq = window.matchMedia('(max-width:760px)');
+  const engine  = root.closest('.fluid-engine');
+  const block   = root.closest('.fe-block, .sqs-block');
+  const section = root.closest('.page-section, section');
+  const touched = [];
+  const force = (el, prop, val) => {
+    if (!el) return;
+    el.style.setProperty(prop, val, 'important');
+    touched.push([el, prop]);
+  };
+  function undo(){ touched.splice(0).forEach(([el, p]) => el.style.removeProperty(p)); }
+
+  function apply(){
+    undo();
+    if (!mq.matches) return;                       // desktop: leave Squarespace alone
+    if (!engine || !block){ console.warn('[vic] autosize: no Fluid Engine grid found, leaving layout alone'); return; }
+    const blocks = engine.querySelectorAll(':scope > .fe-block, :scope > .sqs-block');
+    if (blocks.length !== 1){ console.warn('[vic] autosize: widget shares its section with ' + (blocks.length - 1) + ' other block(s), leaving layout alone'); return; }
+    // One auto-height row holding the widget, whatever row count Squarespace asked for.
+    force(engine,  'grid-template-rows', 'auto');
+    force(engine,  'grid-auto-rows', 'auto');
+    force(engine,  'height', 'auto');
+    force(engine,  'min-height', '0');
+    force(block,   'grid-row', '1 / 2');
+    force(block,   'height', 'auto');
+    force(block,   'min-height', '0');
+    for (let n = root.parentElement; n && n !== block; n = n.parentElement){
+      force(n, 'height', 'auto'); force(n, 'min-height', '0');
+    }
+    if (section){ force(section, 'height', 'auto'); force(section, 'min-height', '0'); }
+  }
+
+  apply();
+  (mq.addEventListener ? mq.addEventListener('change', apply) : mq.addListener(apply));
+  window.addEventListener('load', apply);
+})();
+</script>
+
+<!-- ======================== >>> PASTE TO HERE <<< ======================== -->
+
+</body>
+</html>
