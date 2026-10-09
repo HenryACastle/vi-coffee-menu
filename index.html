@@ -81,9 +81,9 @@ const CONFIG = {
                             // height, so the block/section (its row count) controls the size.
                             // Mobile: menu on top, photo stretches to fill whatever is left.
                             // Desktop: the zoom runway is capped at the block's height.
-    maxHeightDesktop: "none",  // HARD CAP on total widget height on desktop (px / vh). The scroll
+    maxHeightDesktop: "600px", // HARD CAP on total widget height on desktop (px / vh). The scroll
                             // runway is trimmed to fit, so the pinned stretch gets shorter.
-    maxHeightMobile:  "none",   // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
+    maxHeightMobile:  "400px",   // HARD CAP on mobile (e.g. "1150px"). Anything past it is clipped,
                             // so only set it once you know the content height.
     fitMenuAtEnd: true      // clamp the final menu size so the WHOLE menu fits inside the
                             // stage at the end. Without this a long menu can finish zoomed
@@ -410,14 +410,16 @@ const CONFIG = {
     rs.setProperty('--vw', document.documentElement.clientWidth + 'px');
     // Total widget height = one stage on screen, + scrollLength stages of zoom,
     // + holdAtEnd stages of the finished menu sitting still before the page moves on.
+    // maxHeightDesktop caps the VISIBLE stage. The zoom still needs scroll distance
+    // beyond it, so the runway is only trimmed to the Squarespace block when that is taller.
+    const stageCap = cssLenToPx(E.maxHeightDesktop);
+    rs.setProperty('--stage', stageCap > 0 ? 'min(' + stageHeight + ',' + stageCap + 'px)' : stageHeight);
     const stagePx = sticky.getBoundingClientRect().height || window.innerHeight;
     let heroPx = Math.round(stagePx * (1 + runwayStages));
-    let capPx = cssLenToPx(E.maxHeightDesktop);
     if (fillBlock){
       const bh = fillBlock.getBoundingClientRect().height;
-      if (bh > 0) capPx = capPx > 0 ? Math.min(capPx, bh) : bh;
+      if (bh > stagePx) heroPx = Math.min(heroPx, Math.round(bh));
     }
-    if (capPx > 0) heroPx = Math.max(Math.round(stagePx), Math.min(heroPx, capPx));
     rs.setProperty('--heroH', heroPx + 'px');
 
     // Fit the menu twice over. offsetHeight is the UNTRANSFORMED layout height, so the
