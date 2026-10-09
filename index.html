@@ -77,6 +77,10 @@ const CONFIG = {
     holdAtEnd:    0.15,     // EXTRA scroll AFTER the zoom finishes: the completed menu stays
                             // pinned and readable, then the page releases and scrolls on.
                             // 0 = no hold (the old behaviour, releases the instant it lands).
+    desktopHeight: "600px",  // FIXED desktop height. The widget is exactly this tall, NOT pinned:
+                            // the zoom plays as it scrolls up through the screen, with no extra
+                            // scroll runway below it. "" = old pinned-runway behaviour.
+    zeroSpacing:  true,     // strip padding/margin from the Squarespace wrappers around the widget
     fillSection:  true,     // true = the widget takes 100% of the Squarespace block's width AND
                             // height, so the block/section (its row count) controls the size.
                             // Mobile: menu on top, photo stretches to fill whatever is left.
@@ -285,6 +289,12 @@ const CONFIG = {
   @keyframes vic-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
   @media (prefers-reduced-motion:reduce){.vic-cue .vic-chev{animation:none;}}
 
+  /* Fixed desktop height: nothing sticks, the scene is just a box of that height. */
+  .vic.is-fixed .vic-hero{height:var(--heroH) !important;}
+  .vic.is-fixed .vic-sticky{position:relative;height:var(--stage);}
+  .vic.is-fixed .vic-cue{display:none;}
+  .vic.is-fixed .vic-overlay{padding-bottom:0;}
+
   /* ---------------- MOBILE: single column on the wall, full photo below ---------------- */
   @media (max-width:760px){
     /* Natural document flow: no sticky zoom stage that clips, and no tall
@@ -384,6 +394,15 @@ const CONFIG = {
 
   /* ---- FILL: hand the height to the Squarespace block. Every wrapper between the
          widget and the block gets height:100%, so the block's own size is the size. ---- */
+  const desktopH = (E.desktopHeight || '').trim();
+  if (E.zeroSpacing !== false){
+    for (let n = root.parentElement; n && !/^(MAIN|BODY)$/.test(n.tagName); n = n.parentElement){
+      n.style.setProperty('padding', '0', 'important');
+      n.style.setProperty('margin-top', '0', 'important');
+      n.style.setProperty('margin-bottom', '0', 'important');
+      if (n.classList.contains('content-wrapper') || /^SECTION$/.test(n.tagName)) break;
+    }
+  }
   const fillBlock = (E.fillSection !== false) ? root.closest('.sqs-block, .fe-block') : null;
   if (fillBlock){
     root.classList.add('is-fill');
@@ -415,12 +434,16 @@ const CONFIG = {
     const stageCap = cssLenToPx(E.maxHeightDesktop);
     rs.setProperty('--stage', stageCap > 0 ? 'min(' + stageHeight + ',' + stageCap + 'px)' : stageHeight);
     const stagePx = sticky.getBoundingClientRect().height || window.innerHeight;
+    if (desktopH && !isMobile()){
+      root.classList.add('is-fixed');
+      rs.setProperty('--stage', desktopH); rs.setProperty('--heroH', desktopH);
+    } else root.classList.remove('is-fixed');
     let heroPx = Math.round(stagePx * (1 + runwayStages));
     if (fillBlock){
       const bh = fillBlock.getBoundingClientRect().height;
       if (bh > stagePx) heroPx = Math.min(heroPx, Math.round(bh));
     }
-    rs.setProperty('--heroH', heroPx + 'px');
+    if (!root.classList.contains('is-fixed')) rs.setProperty('--heroH', heroPx + 'px');
 
     // Fit the menu twice over. offsetHeight is the UNTRANSFORMED layout height, so the
     // measurement is not polluted by the scale we are currently applying.
@@ -505,12 +528,18 @@ const CONFIG = {
     // the stage can be shorter than the screen, e.g. 78vh).
     const total = r.height - sticky.getBoundingClientRect().height;
     let p = total>0 ? (-r.top)/total : 0;          // 0..1 across the WHOLE runway
+    if (root.classList.contains('is-fixed')){
+      // Fixed height: no pin. Zoom runs from the widget entering the screen (0)
+      // to the widget centred on the screen (1).
+      const vh = window.innerHeight, endTop = (vh - r.height) / 2;
+      p = (vh - r.top) / Math.max(1, vh - endTop);
+    }
     p = Math.min(1, Math.max(0, p));
 
     // Remap: the zoom finishes after scrollLength stages, then `a` sits at 1 for the
     // holdAtEnd stages that follow — the menu is done and simply stays put, still
     // pinned, until the runway runs out and the page scrolls on normally.
-    let a = (scrollLength <= 0) ? 1 : p * (runwayStages / scrollLength);
+    let a = root.classList.contains('is-fixed') ? p : (scrollLength <= 0) ? 1 : p * (runwayStages / scrollLength);
     a = Math.min(1, Math.max(0, a));
 
     const photoScale = 1 + (photoZoomMax - 1) * a;
