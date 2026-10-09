@@ -216,7 +216,7 @@ const CONFIG = {
 
   .vic{
     /* --stage and --heroH are written by JS from CONFIG.embed */
-    --stage:78vh;
+    --stage:600px;
     position:relative;
     color:var(--ink);
     font-family:var(--sans);
@@ -234,7 +234,7 @@ const CONFIG = {
   }
 
   /* ---------------- Hero: the scene that zooms into the wall ---------------- */
-  .vic-hero{position:relative;height:var(--heroH,187vh);}
+  .vic-hero{position:relative;height:var(--heroH,600px);}
   .vic-sticky{position:sticky;top:0;height:var(--stage);overflow:hidden;background:var(--wall);}
   .vic-stage{position:absolute;inset:0;}
 
@@ -290,7 +290,12 @@ const CONFIG = {
   @media (prefers-reduced-motion:reduce){.vic-cue .vic-chev{animation:none;}}
 
   /* Fixed desktop height: nothing sticks, the scene is just a box of that height. */
-  .vic.is-fixed .vic-hero{height:var(--heroH) !important;}
+  /* The container: a hard box. Anything inside (even before the script runs, as in the
+     Squarespace editor) can never stretch past the fixed height. */
+  @media (min-width:761px){
+    .vic.is-fixed{height:var(--stage,600px);max-height:var(--stage,600px);overflow:hidden;}
+  }
+  .vic.is-fixed .vic-hero{height:var(--heroH,600px) !important;}
   .vic.is-fixed .vic-sticky{position:relative;height:var(--stage);}
   .vic.is-fixed .vic-cue{display:none;}
   .vic.is-fixed .vic-overlay{padding-bottom:0;}
@@ -337,7 +342,7 @@ const CONFIG = {
      ---------------------------------------------------------------------- */
 </style>
 
-<div class="vic" id="vicRoot">
+<div class="vic is-fixed" id="vicRoot">
   <section class="vic-hero" id="vicHero">
     <div class="vic-sticky">
       <div class="vic-stage">
